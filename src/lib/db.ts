@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -52,8 +52,15 @@ function getDb(): DatabaseSync {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    const db = new DatabaseSync(DB_PATH);
-    db.exec("PRAGMA journal_mode = WAL;");
+    // Load node:sqlite lazily at runtime so Next.js build workers don't evaluate it at module import time
+    const sqliteModule = eval("require")("node:sqlite") as typeof import("node:sqlite");
+    const db = new sqliteModule.DatabaseSync(DB_PATH);
+    try {
+      db.exec("PRAGMA busy_timeout = 10000;");
+      db.exec("PRAGMA journal_mode = WAL;");
+    } catch {
+      // Ignore WAL lock contention across concurrent workers
+    }
     db.exec("PRAGMA foreign_keys = ON;");
     initTables(db);
     seedIfEmpty(db);
