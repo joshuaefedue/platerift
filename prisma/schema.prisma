@@ -1,0 +1,231 @@
+// Multi-Tenant Restaurant SaaS Platform — Prisma Schema
+// Supports SQLite locally and PostgreSQL in production
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Restaurant {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  tagline             String
+  cuisine             String
+  description         String
+  ownerName           String
+  ownerEmail          String
+  phone               String
+  address             String
+  timezone            String   @default("America/Chicago")
+  plan                String   @default("growth") // starter | growth | enterprise
+  status              String   @default("active") // active | onboarding | suspended
+
+  // Custom Domain & Multi-Tenant Routing
+  customDomain        String?  @unique
+  subdomain           String   @unique
+  domainVerified      Boolean  @default(false)
+  sslStatus           String   @default("active") // pending | provisioning | active
+  dnsTxtToken         String
+
+  // Unique Tenant Branding & Customizations
+  logoEmoji           String   @default("🍽️")
+  primaryColor        String   @default("#ea580c")
+  accentColor         String   @default("#fff7ed")
+  layoutStyle         String   @default("modern-grid") // modern-grid | editorial-list | compact-bistro
+  heroBannerUrl       String
+  customRequirementNotes String @default("")
+
+  // Feature Flags / Unique Requirements JSON
+  featuresJson        String   // pickup, delivery, dineIn, tableReservation, loyaltyProgram, tipping, promoCodes, scheduledOrders
+
+  // Order Limits & Pause Controls
+  orderingEnabled     Boolean  @default(true)
+  pauseReason         String   @default("")
+  maxOrdersPerHour    Int      @default(25)
+  maxOrdersPerDay     Int      @default(200)
+  minOrderAmount      Float    @default(12.0)
+  maxOrderAmount      Float    @default(500.0)
+  prepTimeMinutes     Int      @default(25)
+  advanceNoticeDays   Int      @default(0)
+  advanceNoticeHours  Int      @default(0)
+  advanceNoticeNote   String   @default("")
+  autoPauseOnLimit    Boolean  @default(true)
+
+  // Operating Schedule & Specific Time/Day Blackouts JSON
+  weeklyScheduleJson  String   // 7-day open/close times and day-off flags
+  blackoutWindowsJson String   // Specific dates/hours when ordering is turned off
+
+  // Per-Tenant Payment Gateways (Stripe & PayPal)
+  paymentConfigJson   String   // Stripe & PayPal keys, mode (simulated/live), taxRate, deliveryFee
+
+  // Per-Tenant SMS & Email Marketing Configuration
+  commsConfigJson     String   // Twilio & Email/Resend config + automated SMS templates
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  menuItems           MenuItem[]
+  orders              Order[]
+  customers           Customer[]
+  smsLogs             SmsLog[]
+  emailCampaigns      EmailCampaign[]
+  users               UserAccount[]
+  scheduledReorders   ScheduledReorder[]
+}
+
+model UserAccount {
+  id                  String      @id @default(cuid())
+  scope               String      // "platform" | "restaurant"
+  restaurantId        String?
+  name                String
+  email               String
+  phone               String      @default("")
+  role                String      // super_admin | platform_ops | billing_admin | support_agent | restaurant_owner | general_manager | kitchen_chef | cashier_host | marketing_manager
+  status              String      @default("active") // active | invited | suspended
+  title               String      @default("")
+  pinCode             String      @default("")
+  permissionsJson     String      @default("[]")
+  lastActiveAt        String
+  createdAt           String
+
+  restaurant          Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model MenuItem {
+  id                  String   @id @default(cuid())
+  restaurantId        String
+  category            String
+  name                String
+  description         String
+  price               Float
+  imageUrl            String
+  available           Boolean  @default(true)
+  unavailableReason   String   @default("") // e.g., "Sold out for tonight", "Seasonal ingredient unavailable"
+  dailyStockLimit     Int?
+  currentStockCount   Int?
+  popular             Boolean  @default(false)
+  prepTimeMinutes     Int      @default(15)
+  dietaryTagsJson     String   // ["Vegan", "Gluten-Free", "Spicy"]
+  modifiersJson       String   // Size, add-ons, spice level
+  sortOrder           Int      @default(0)
+
+  restaurant          Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id                  String   @id @default(cuid())
+  restaurantId        String
+  name                String
+  email               String
+  phone               String
+  defaultAddress      String   @default("")
+  totalOrders         Int      @default(0)
+  totalSpent          Float    @default(0)
+  loyaltyPoints       Int      @default(0)
+  vipStatus           Boolean  @default(false)
+  smsOptIn            Boolean  @default(true)
+  emailOptIn          Boolean  @default(true)
+  tagsJson            String   @default("[]")
+  notes               String   @default("")
+  lastOrderAt         String?
+  createdAt           String
+
+  restaurant          Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model ScheduledReorder {
+  id                  String   @id @default(cuid())
+  restaurantId        String
+  customerId          String
+  customerName        String
+  customerEmail       String
+  customerPhone       String
+  sourceOrderNumber   String
+  title               String
+  orderType           String   // pickup | delivery | dine_in
+  deliveryAddress     String?
+  tableNumber         String?
+  itemsJson           String
+  subtotal            Float
+  tax                 Float
+  deliveryFee         Float
+  tip                 Float
+  total               Float
+  paymentMethod       String   // stripe | paypal
+  frequency           String   // once | weekly | biweekly | monthly
+  scheduledDate       String   // YYYY-MM-DD
+  scheduledTime       String   // HH:mm
+  specialInstructions String   @default("")
+  status              String   @default("active") // active | paused | completed | cancelled
+  lastTriggeredAt     String?
+  createdAt           String
+
+  restaurant          Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id                  String   @id @default(cuid())
+  orderNumber         String
+  restaurantId        String
+  customerId          String?
+  customerName        String
+  customerEmail       String
+  customerPhone       String
+  orderType           String   // pickup | delivery | dine_in
+  tableNumber         String?
+  deliveryAddress     String?
+  itemsJson           String
+  subtotal            Float
+  tax                 Float
+  deliveryFee         Float
+  tip                 Float
+  discount            Float
+  total               Float
+  paymentMethod       String   // stripe | paypal
+  paymentStatus       String   // paid | refunded | pending
+  paymentReference    String
+  status              String   // confirmed | preparing | ready | completed | cancelled
+  specialInstructions String   @default("")
+  scheduledFor        String?
+  createdAt           String
+
+  restaurant          Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model SmsLog {
+  id                  String   @id @default(cuid())
+  restaurantId        String
+  customerName        String
+  customerPhone       String
+  triggerType         String   // order_confirmed | order_preparing | order_ready | order_cancelled | broadcast | manual
+  message             String
+  provider            String   // twilio_simulated | twilio_live
+  status              String   // delivered | queued | failed
+  createdAt           String
+
+  restaurant          Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model EmailCampaign {
+  id                  String   @id @default(cuid())
+  restaurantId        String
+  name                String
+  subject             String
+  segment             String   // all | vip | repeat | inactive
+  promoCode           String?
+  discountPercent     Int?
+  bodyHtml            String
+  status              String   // sent | scheduled | draft
+  recipientCount      Int
+  openRate            Float
+  clickRate           Float
+  revenueGenerated    Float
+  sentAt              String
+
+  restaurant          Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
