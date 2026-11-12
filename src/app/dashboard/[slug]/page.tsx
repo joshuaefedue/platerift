@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bell,
+  Bot,
   CalendarClock,
   CheckCircle2,
   ChevronDown,
@@ -62,6 +63,7 @@ import { OwnerStorefrontPagesEditor } from "@/components/OwnerStorefrontPagesEdi
 import { OwnerInventoryManager } from "@/components/OwnerInventoryManager";
 import { OwnerBeginnerGuideBar } from "@/components/OwnerBeginnerGuideBar";
 import { OwnerIntegrationsHub } from "@/components/OwnerIntegrationsHub";
+import { OwnerPortalAssistant } from "@/components/OwnerPortalAssistant";
 import { buildDefaultVariantAndSideGroups } from "@/lib/menuVariantsAndSides";
 
 type ActiveTab = PortalTabId;
@@ -93,6 +95,7 @@ export default function RestaurantOwnerPortal() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTab>("orders");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [showOwnerAssistant, setShowOwnerAssistant] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState<
     "ALL" | Order["status"]
@@ -1306,6 +1309,14 @@ export default function RestaurantOwnerPortal() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => setShowOwnerAssistant((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-2 text-xs font-bold text-white shadow-md hover:opacity-95 transition"
+              >
+                <Bot className="h-4 w-4" />
+                <span>AI Agent</span>
+              </button>
               <button
                 onClick={() =>
                   loadPortalData(simDay || undefined, simTime || undefined)
@@ -7142,6 +7153,26 @@ export default function RestaurantOwnerPortal() {
             </button>
           </div>
         </nav>
+
+        {/* Owner AI Co-Pilot Assistant Agent */}
+        <OwnerPortalAssistant
+          restaurant={restaurant}
+          menuItems={menuItems}
+          orders={orders}
+          isOpen={showOwnerAssistant}
+          onSetOpen={setShowOwnerAssistant}
+          onSelectTab={(tab) => setActiveTab(tab)}
+          onOpenAddMenuModal={() => setShowAddMenuModal(true)}
+          onOpenEditMenuModal={(item) => handleStartEditMenuItem(item)}
+          onFilterOrders={(statusFilter, datePreset) => {
+            setOrderStatusFilter(statusFilter);
+            setOrderDatePreset(datePreset);
+          }}
+          onRefreshPortal={async () => {
+            await loadPortalData(simDay || undefined, simTime || undefined);
+          }}
+          onNotify={notify}
+        />
       </div>
     </div>
   );
