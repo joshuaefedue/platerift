@@ -1211,97 +1211,12 @@ export default function CustomerOrderingStorefront() {
 
   return (
     <div className="min-h-screen bg-[#0b0c10] text-zinc-300 font-sans antialiased selection:bg-gold-500 selection:text-black">
-      {/* ================= TOP CONCIERGE & CUSTOM DOMAIN BAR ================= */}
-      <div className="bg-zinc-950 border-b border-zinc-800/80 px-3 sm:px-4 py-2 text-xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-2 sm:gap-3">
-          <div className="flex items-center gap-2 tracking-widest uppercase text-zinc-400 text-[10px] sm:text-[11px] max-w-full min-w-0">
-            <Sparkles
-              className="w-3.5 h-3.5 shrink-0"
-              style={{ color: brandColor }}
-            />
-            <span className="truncate">
-              {restaurant.tagline} — Direct Online Ordering & Provisioning
-            </span>
-          </div>
-
-          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto max-w-full pb-0.5 sm:pb-0 sm:flex-wrap sm:gap-2.5">
-            <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-zinc-900 border border-zinc-800 px-2.5 py-0.5 font-mono text-[10px] text-zinc-300">
-              <Lock className="h-2.5 w-2.5 text-emerald-400" />
-              https://{restaurant.customDomain}
-            </span>
-
-            {/* Layout Switcher Preview */}
-            <select
-              value={activeLayout}
-              onChange={(e) => setPreviewLayout(e.target.value as LayoutStyle)}
-              className="shrink-0 rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-wider text-gold-300"
-              title="Preview Brand Layout Style"
-            >
-              <option value="aura-luxury">Layout: AURA Bespoke Luxury</option>
-              <option value="modern-grid">Layout: Banquet Visual Grid</option>
-              <option value="editorial-list">
-                Layout: Degustation Editorial List
-              </option>
-              <option value="compact-bistro">
-                Layout: Express Bistro Cards
-              </option>
-            </select>
-
-            {/* Day/Time Schedule Tester */}
-            <select
-              value={simDay}
-              onChange={(e) => {
-                setSimDay(e.target.value);
-                loadStorefront(e.target.value, simTime);
-              }}
-              className="shrink-0 rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-0.5 text-[10px] text-zinc-300"
-            >
-              <option value="">Live Day</option>
-              {[
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-              ].map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-            <input
-              type="time"
-              value={simTime}
-              onChange={(e) => {
-                setSimTime(e.target.value);
-                loadStorefront(simDay, e.target.value);
-              }}
-              className="shrink-0 rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-300"
-            />
-
-            <Link
-              href={`/dashboard/${restaurant.slug}`}
-              className="shrink-0 inline-flex items-center gap-1 rounded-full bg-zinc-900 border border-zinc-700 px-2.5 py-0.5 text-[10px] font-semibold text-white hover:border-gold-400 transition"
-            >
-              <LayoutDashboard className="h-2.5 w-2.5" /> Owner Portal
-            </Link>
-            <Link
-              href="/admin"
-              className="shrink-0 inline-flex items-center gap-1 rounded-full bg-zinc-900 border border-zinc-800 px-2.5 py-0.5 text-[10px] text-zinc-400 hover:text-white transition"
-            >
-              Super Admin
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ================= STICKY AURA NAVBAR ================= */}
-      <nav className="sticky top-0 z-40 bg-[#0b0c10]/85 backdrop-blur-md border-b border-zinc-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center gap-3 sm:gap-6 min-w-0">
-            <a href="#" className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+      {/* ================= PRIMARY STOREFRONT NAVBAR ================= */}
+      <header className="sticky top-0 z-40 bg-[#0b0c10]/95 backdrop-blur-md border-b border-zinc-800/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          {/* Left: Brand Logo */}
+          <div className="flex items-center gap-6 min-w-0">
+            <a href="#" className="flex items-center gap-2.5 min-w-0">
               <StorefrontBrandLogo
                 restaurant={restaurant}
                 brandColor={brandColor}
@@ -1309,137 +1224,161 @@ export default function CustomerOrderingStorefront() {
               />
             </a>
 
-            <div className="hidden md:flex items-center gap-4 border-l border-zinc-800 pl-4 text-xs font-medium text-zinc-400">
+            {/* Center/Left: Clean Primary Links */}
+            <nav className="hidden md:flex items-center gap-5 border-l border-zinc-800/80 pl-5 text-xs font-medium text-zinc-400">
+              <a
+                href="#section-cat-0"
+                className="text-zinc-200 hover:text-white transition"
+              >
+                Menu
+              </a>
               <a href="#about-section" className="hover:text-white transition">
                 About
               </a>
-              <Link
-                href={`/store/${restaurant.slug}/privacy`}
-                className="hover:text-white transition"
-              >
-                Privacy
-              </Link>
-              <Link
-                href={`/store/${restaurant.slug}/terms`}
-                className="hover:text-white transition"
-              >
-                Terms
-              </Link>
               <a href="#contact-footer" className="hover:text-white transition">
-                Contact
+                Hours & Location
               </a>
-            </div>
-
-            {/* Event / Order Spec Pill */}
-            <div className="hidden xl:flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 rounded-full px-4 py-1.5 text-xs">
-              <div className="flex items-center gap-2 text-zinc-400">
-                <Calendar
-                  className="w-3.5 h-3.5"
-                  style={{ color: brandColor }}
-                />
-                <span className="text-zinc-200">
-                  {availability
-                    ? `${availability.checkedDay} ${availability.checkedTime}`
-                    : "Today"}
-                </span>
-              </div>
-              <span className="text-zinc-700">•</span>
-              <div className="flex items-center gap-2 text-zinc-400">
-                <Users className="w-3.5 h-3.5" style={{ color: brandColor }} />
-                <span className="text-zinc-200 uppercase font-mono text-[11px]">
-                  {orderType.replace("_", " ")}
-                </span>
-              </div>
-              <span className="text-zinc-700">•</span>
-              <div className="flex items-center gap-2 text-zinc-400">
-                <MapPin className="w-3.5 h-3.5" style={{ color: brandColor }} />
-                <span className="text-zinc-200 truncate max-w-[160px]">
-                  {restaurant.address}
-                </span>
-              </div>
-            </div>
+              {vapiVoiceActive && (
+                <a
+                  href={`tel:${restaurant.integrationsConfig?.vapi?.inboundPhoneNumber || restaurant.phone}`}
+                  className="hover:text-white transition"
+                >
+                  Phone Order
+                </a>
+              )}
+            </nav>
           </div>
 
-          {/* Actions, Customer Account & Cart Trigger */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {restaurant.features.dietaryFilters &&
-              allDietaryTags.length > 0 && (
-                <select
-                  value={selectedDietary}
-                  onChange={(e) => setSelectedDietary(e.target.value)}
-                  className="hidden lg:inline-block rounded-full bg-zinc-900 border border-zinc-800 px-3.5 py-2 text-xs uppercase tracking-wider text-zinc-300 focus:outline-none"
-                >
-                  <option value="ALL">All Dietary</option>
-                  {allDietaryTags.map((tag) => (
-                    <option key={tag} value={tag}>
-                      {tag}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-            {/* CUSTOMER ACCOUNT / ORDER HISTORY / RE-ORDER BUTTON */}
-            {activeCustomer ? (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setAccountTab("history");
-                    setShowAccountModal(true);
-                  }}
-                  className="flex items-center gap-2 sm:gap-2.5 rounded-full bg-zinc-900/90 border border-zinc-700/80 hover:border-zinc-500 px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs transition"
-                  title="View Order History, 1-Click Re-Orders & Scheduled Orders"
-                >
-                  <span
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-black"
-                    style={{ backgroundColor: brandColor }}
-                  >
-                    {activeCustomer.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)}
+          {/* Right: Clean Customer Actions + Compact Owner Menu */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Compact Owner / Preview Tools Dropdown (Tucked away cleanly) */}
+            <details className="relative group">
+              <summary className="list-none cursor-pointer inline-flex items-center gap-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 text-[11px] font-medium text-zinc-400 hover:text-white transition">
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Owner Tools</span>
+              </summary>
+              <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-zinc-800 bg-zinc-950 p-3.5 shadow-2xl space-y-3 z-50 text-xs">
+                <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
+                  <span className="font-semibold text-white">Storefront Preview</span>
+                  <span className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-400">
+                    <Lock className="h-2.5 w-2.5" />
+                    {restaurant.customDomain}
                   </span>
-                  <div className="text-left hidden sm:block">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-white leading-none">
-                        {activeCustomer.name.split(" ")[0]}
-                      </span>
-                      {activeCustomer.vipStatus && (
-                        <span
-                          className="rounded px-1.5 py-0.2 text-[9px] font-mono uppercase font-bold text-black"
-                          style={{ backgroundColor: brandColor }}
-                        >
-                          VIP
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] font-mono text-zinc-400 leading-none mt-1">
-                      {activeCustomer.loyaltyPoints} pts •{" "}
-                      {customerOrders.length} orders
-                    </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] uppercase tracking-wider text-zinc-400">
+                    Menu Layout Style
+                  </label>
+                  <select
+                    value={activeLayout}
+                    onChange={(e) =>
+                      setPreviewLayout(e.target.value as LayoutStyle)
+                    }
+                    className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-200"
+                  >
+                    <option value="aura-luxury">AURA Bespoke Luxury</option>
+                    <option value="modern-grid">Banquet Visual Grid</option>
+                    <option value="editorial-list">Editorial List</option>
+                    <option value="compact-bistro">Express Bistro Cards</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] uppercase tracking-wider text-zinc-400">
+                    Test Day & Time Schedule
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <select
+                      value={simDay}
+                      onChange={(e) => {
+                        setSimDay(e.target.value);
+                        loadStorefront(e.target.value, simTime);
+                      }}
+                      className="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-200"
+                    >
+                      <option value="">Live Day</option>
+                      {[
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                        "Sunday",
+                      ].map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="time"
+                      value={simTime}
+                      onChange={(e) => {
+                        setSimTime(e.target.value);
+                        loadStorefront(simDay, e.target.value);
+                      }}
+                      className="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-200"
+                    />
                   </div>
-                  {activeScheduledCount > 0 && (
-                    <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-emerald-950/90 border border-emerald-700/60 px-2 py-0.5 text-[10px] font-mono text-emerald-300">
-                      <Repeat className="h-2.5 w-2.5" /> {activeScheduledCount}
-                    </span>
-                  )}
-                </button>
+                </div>
+
+                <div className="pt-1 flex items-center gap-2 border-t border-zinc-800/80">
+                  <Link
+                    href={`/dashboard/${restaurant.slug}`}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 border border-zinc-700 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:border-zinc-500 transition"
+                  >
+                    <LayoutDashboard className="h-3 w-3" /> Owner Portal
+                  </Link>
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 text-[11px] text-zinc-400 hover:text-white transition"
+                  >
+                    Admin
+                  </Link>
+                </div>
               </div>
+            </details>
+
+            {/* Customer Sign In / Account Button */}
+            {activeCustomer ? (
+              <button
+                onClick={() => {
+                  setAccountTab("history");
+                  setShowAccountModal(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 px-3 py-1.5 text-xs font-medium text-white transition"
+                title="View Order History & Account"
+              >
+                <span
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-black"
+                  style={{ backgroundColor: brandColor }}
+                >
+                  {activeCustomer.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .slice(0, 2)}
+                </span>
+                <span className="hidden sm:inline">
+                  {activeCustomer.name.split(" ")[0]}
+                </span>
+              </button>
             ) : (
               <button
                 onClick={() => {
                   setAccountTab("auth");
                   setShowAccountModal(true);
                 }}
-                style={{ borderColor: `${brandColor}60`, color: brandColor }}
-                className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-zinc-900 border px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider hover:bg-zinc-800 transition"
+                className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 px-3.5 py-1.5 text-xs font-medium text-zinc-200 hover:text-white transition"
               >
-                <LogIn className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden sm:inline">Sign In / VIP Account</span>
-                <span className="sm:hidden">Sign In</span>
+                <LogIn className="w-3.5 h-3.5 shrink-0" style={{ color: brandColor }} />
+                <span>Sign In</span>
               </button>
             )}
 
+            {/* Cart / Order Button */}
             <button
               onClick={() => {
                 if (cart.length > 0) {
@@ -1451,25 +1390,71 @@ export default function CustomerOrderingStorefront() {
                     ?.scrollIntoView({ behavior: "smooth" });
                 }
               }}
-              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition"
+              style={{ backgroundColor: brandColor }}
+              className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full text-black text-xs font-bold hover:opacity-95 transition shadow-sm"
             >
-              <UtensilsCrossed
-                className="w-4 h-4 shrink-0"
-                style={{ color: brandColor }}
-              />
-              <span className="text-xs font-semibold uppercase tracking-wider text-white hidden sm:inline">
-                {restaurant.name.split(" ")[0]} Order
-              </span>
-              <span
-                className="w-5 h-5 rounded-full text-black text-[11px] font-bold flex items-center justify-center"
-                style={{ backgroundColor: brandColor }}
-              >
+              <UtensilsCrossed className="w-3.5 h-3.5 shrink-0" />
+              <span>Order</span>
+              <span className="rounded-full bg-black/20 px-1.5 py-0.2 text-[11px] font-bold">
                 {totalCount}
               </span>
             </button>
           </div>
         </div>
-      </nav>
+
+        {/* ================= SECONDARY MENU BAR (CATEGORIES & DIETARY FILTER) ================= */}
+        <div className="border-t border-zinc-800/60 bg-zinc-950/90">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-11 flex items-center justify-between gap-4">
+            {/* Scrollable Category Links */}
+            <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto py-1">
+              {categories.map((cat, idx) => (
+                <a
+                  key={cat}
+                  href={`#section-cat-${idx}`}
+                  className="shrink-0 px-3 py-1 rounded-full text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition whitespace-nowrap"
+                >
+                  {cat}
+                </a>
+              ))}
+            </div>
+
+            {/* Right: Compact Store Status & Dietary Filter */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              {availability && (
+                <span
+                  className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
+                    availability.allowed
+                      ? "bg-emerald-950/50 border-emerald-800/50 text-emerald-300"
+                      : "bg-rose-950/60 border-rose-800/60 text-rose-300"
+                  }`}
+                >
+                  <Clock className="w-3 h-3" />
+                  {availability.allowed
+                    ? `Open • ~${restaurant.prepTimeMinutes}m`
+                    : availability.title}
+                </span>
+              )}
+
+              {restaurant.features.dietaryFilters &&
+                allDietaryTags.length > 0 && (
+                  <select
+                    value={selectedDietary}
+                    onChange={(e) => setSelectedDietary(e.target.value)}
+                    className="rounded-full bg-zinc-900 border border-zinc-800 px-3 py-1 text-[11px] text-zinc-300 focus:outline-none"
+                    aria-label="Filter by dietary preference"
+                  >
+                    <option value="ALL">All Dietary</option>
+                    {allDietaryTags.map((tag) => (
+                      <option key={tag} value={tag}>
+                        {tag}
+                      </option>
+                    ))}
+                  </select>
+                )}
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Feedback Toast */}
       {accountFeedback && (
@@ -1522,15 +1507,15 @@ export default function CustomerOrderingStorefront() {
       )}
 
       {/* ================= EDITORIAL HERO BANNER ================= */}
-      <section className="relative border-b border-zinc-900 py-8 px-4 sm:py-14 sm:px-6 overflow-hidden">
+      <section className="relative border-b border-zinc-900 py-8 px-4 sm:py-12 sm:px-6 overflow-hidden">
         {/* Ambient Brand Color Glow */}
         <div
           className="absolute -top-24 left-1/4 w-[600px] h-[350px] rounded-full blur-[140px] pointer-events-none opacity-20"
           style={{ backgroundColor: brandColor }}
         />
 
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 sm:gap-8 relative z-10">
-          <div className="space-y-4 max-w-2xl">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 relative z-10">
+          <div className="space-y-3.5 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] tracking-widest uppercase"
@@ -1538,120 +1523,49 @@ export default function CustomerOrderingStorefront() {
               >
                 {restaurant.cuisine}
               </span>
-              {availability && (
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider border ${
-                    availability.allowed
-                      ? "bg-emerald-950/60 border-emerald-800/60 text-emerald-300"
-                      : "bg-rose-950/70 border-rose-800/70 text-rose-300"
-                  }`}
-                >
-                  <Clock className="w-3 h-3" />
-                  {availability.allowed
-                    ? requiresAdvanceNotice
-                      ? `Open • ${advanceNoticeSummary} Advance Notice`
-                      : `Open • ~${restaurant.prepTimeMinutes}m Prep`
-                    : availability.title}
-                </span>
-              )}
               {requiresAdvanceNotice && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/60 border border-amber-700/60 text-[11px] font-mono text-amber-300">
                   ⏳ Earliest Ready: {earliestReadyFormatted}
                 </span>
               )}
-              {doordashDriveActive && restaurant.features.delivery && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-950/60 border border-rose-800/60 text-[11px] font-mono text-rose-200">
-                  🚗 DoorDash Drive Courier • 0% Commission
-                </span>
-              )}
-              {vapiVoiceActive && (
-                <a
-                  href={`tel:${restaurant.integrationsConfig?.vapi?.inboundPhoneNumber || restaurant.phone}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-950/60 border border-violet-700/60 text-[11px] font-mono text-violet-200 hover:bg-violet-900/60 transition"
-                >
-                  🎙️ 24/7 AI Phone Order:{" "}
-                  {restaurant.integrationsConfig?.vapi?.inboundPhoneNumber ||
-                    restaurant.phone}
-                </a>
-              )}
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl text-white font-normal leading-[1.15]">
-              {restaurant.name} gastronomy, crafted for your{" "}
+            <h1 className="font-serif text-3xl sm:text-5xl text-white font-normal leading-[1.15]">
+              {restaurant.name}, crafted for your{" "}
               <span className="italic" style={{ color: brandColor }}>
-                private table.
+                table.
               </span>
             </h1>
             <p className="text-zinc-400 text-sm sm:text-base font-light leading-relaxed">
               {restaurant.description}
             </p>
-
-            {/* Quick Customer Re-Order & Scheduled Order Bar in Hero */}
-            <div className="pt-2 flex flex-wrap items-center gap-2 sm:gap-2.5">
-              <button
-                onClick={() => {
-                  setAccountTab(activeCustomer ? "history" : "auth");
-                  setShowAccountModal(true);
-                }}
-                className="inline-flex items-center gap-2 rounded-full bg-zinc-900/90 border border-zinc-700 hover:border-zinc-500 px-3.5 sm:px-4 py-2 text-xs font-semibold text-white transition"
-              >
-                <History className="h-3.5 w-3.5 shrink-0" style={{ color: brandColor }} />
-                <span>
-                  {activeCustomer
-                    ? `Past Orders & 1-Click Re-Order (${customerOrders.length})`
-                    : "Sign In to View Order History & Re-Order"}
-                </span>
-              </button>
-              <button
-                onClick={() => {
-                  setAccountTab(activeCustomer ? "scheduled" : "auth");
-                  setShowAccountModal(true);
-                }}
-                className="inline-flex items-center gap-2 rounded-full bg-zinc-900/90 border border-zinc-800 hover:border-zinc-600 px-3.5 sm:px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white transition"
-              >
-                <Repeat className="h-3.5 w-3.5 shrink-0" style={{ color: brandColor }} />
-                <span>Scheduled & Recurring Orders ({activeScheduledCount})</span>
-              </button>
-              {activeCustomer && customerOrders.length > 0 && (
-                <button
-                  onClick={() => handleInstantReorderNow(customerOrders[0])}
-                  style={{ backgroundColor: brandColor, color: "#000" }}
-                  className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider hover:opacity-90 transition shadow"
-                >
-                  <Zap className="h-3.5 w-3.5" /> Re-Order Last (#
-                  {customerOrders[0].orderNumber})
-                </button>
-              )}
-            </div>
           </div>
 
-          {/* Quick Section Anchor Tags & Mobile Dietary Filter */}
-          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto w-full lg:w-auto pb-2">
-            {restaurant.features.dietaryFilters &&
-              allDietaryTags.length > 0 && (
-                <select
-                  value={selectedDietary}
-                  onChange={(e) => setSelectedDietary(e.target.value)}
-                  className="lg:hidden shrink-0 rounded-full bg-zinc-900 border border-zinc-700 px-3.5 py-2.5 text-xs uppercase tracking-wider text-zinc-200 focus:outline-none"
-                  aria-label="Filter by dietary preference"
-                >
-                  <option value="ALL">All Dietary</option>
-                  {allDietaryTags.map((tag) => (
-                    <option key={tag} value={tag}>
-                      {tag}
-                    </option>
-                  ))}
-                </select>
-              )}
-            {categories.map((cat, idx) => (
-              <a
-                key={cat}
-                href={`#section-cat-${idx}`}
-                className="shrink-0 px-4 sm:px-5 py-2.5 rounded-full bg-zinc-900 hover:border-zinc-600 border border-zinc-800 text-xs font-medium uppercase tracking-wider text-zinc-300 hover:text-white transition whitespace-nowrap"
+          {/* Clean Quick Re-Order Actions */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setAccountTab(activeCustomer ? "history" : "auth");
+                setShowAccountModal(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 px-3.5 py-2 text-xs font-medium text-zinc-200 hover:text-white transition"
+            >
+              <History className="h-3.5 w-3.5 shrink-0" style={{ color: brandColor }} />
+              <span>
+                {activeCustomer
+                  ? `Past Orders (${customerOrders.length})`
+                  : "Past Orders"}
+              </span>
+            </button>
+            {activeCustomer && customerOrders.length > 0 && (
+              <button
+                onClick={() => handleInstantReorderNow(customerOrders[0])}
+                style={{ backgroundColor: brandColor, color: "#000" }}
+                className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold hover:opacity-90 transition shadow"
               >
-                {cat}
-              </a>
-            ))}
+                <Zap className="h-3.5 w-3.5" /> Re-Order Last
+              </button>
+            )}
           </div>
         </div>
       </section>
