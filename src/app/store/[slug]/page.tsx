@@ -1251,6 +1251,21 @@ export default function CustomerOrderingStorefront() {
 
           {/* Right: Clean Customer Actions + Compact Owner Menu */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {availability && (
+              <span
+                className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+                  availability.allowed
+                    ? "bg-emerald-950/50 border-emerald-800/50 text-emerald-300"
+                    : "bg-rose-950/60 border-rose-800/60 text-rose-300"
+                }`}
+              >
+                <Clock className="w-3 h-3" />
+                {availability.allowed
+                  ? `Open • ~${restaurant.prepTimeMinutes}m`
+                  : availability.title}
+              </span>
+            )}
+
             {/* Compact Owner / Preview Tools Dropdown (Tucked away cleanly) */}
             <details className="relative group">
               <summary className="list-none cursor-pointer inline-flex items-center gap-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 text-[11px] font-medium text-zinc-400 hover:text-white transition">
@@ -1399,59 +1414,6 @@ export default function CustomerOrderingStorefront() {
                 {totalCount}
               </span>
             </button>
-          </div>
-        </div>
-
-        {/* ================= SECONDARY MENU BAR (CATEGORIES & DIETARY FILTER) ================= */}
-        <div className="border-t border-zinc-800/60 bg-zinc-950/90">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-11 flex items-center justify-between gap-4">
-            {/* Scrollable Category Links */}
-            <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto py-1">
-              {categories.map((cat, idx) => (
-                <a
-                  key={cat}
-                  href={`#section-cat-${idx}`}
-                  className="shrink-0 px-3 py-1 rounded-full text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition whitespace-nowrap"
-                >
-                  {cat}
-                </a>
-              ))}
-            </div>
-
-            {/* Right: Compact Store Status & Dietary Filter */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              {availability && (
-                <span
-                  className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
-                    availability.allowed
-                      ? "bg-emerald-950/50 border-emerald-800/50 text-emerald-300"
-                      : "bg-rose-950/60 border-rose-800/60 text-rose-300"
-                  }`}
-                >
-                  <Clock className="w-3 h-3" />
-                  {availability.allowed
-                    ? `Open • ~${restaurant.prepTimeMinutes}m`
-                    : availability.title}
-                </span>
-              )}
-
-              {restaurant.features.dietaryFilters &&
-                allDietaryTags.length > 0 && (
-                  <select
-                    value={selectedDietary}
-                    onChange={(e) => setSelectedDietary(e.target.value)}
-                    className="rounded-full bg-zinc-900 border border-zinc-800 px-3 py-1 text-[11px] text-zinc-300 focus:outline-none"
-                    aria-label="Filter by dietary preference"
-                  >
-                    <option value="ALL">All Dietary</option>
-                    {allDietaryTags.map((tag) => (
-                      <option key={tag} value={tag}>
-                        {tag}
-                      </option>
-                    ))}
-                  </select>
-                )}
-            </div>
           </div>
         </div>
       </header>
@@ -1759,7 +1721,39 @@ export default function CustomerOrderingStorefront() {
       {/* ================= ORDERING WORKSPACE ================= */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 pb-28 lg:pb-12 grid lg:grid-cols-12 gap-8 lg:gap-10">
         {/* CATERING / CULINARY MENU (8 Cols) */}
-        <div className="lg:col-span-8 space-y-12 sm:space-y-16">
+        <div className="lg:col-span-8 space-y-10 sm:space-y-14">
+          {/* Category Navigation & Dietary Filter Bar inside Menu List */}
+          <div className="sticky top-16 z-30 -mx-2 px-2 py-3 bg-[#0b0c10]/95 backdrop-blur-md border-b border-zinc-800/80 flex items-center justify-between gap-3">
+            <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
+              {categories.map((cat, idx) => (
+                <a
+                  key={cat}
+                  href={`#section-cat-${idx}`}
+                  className="shrink-0 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 hover:border-zinc-600 text-xs font-medium text-zinc-300 hover:text-white transition whitespace-nowrap"
+                >
+                  {cat}
+                </a>
+              ))}
+            </div>
+
+            {restaurant.features.dietaryFilters &&
+              allDietaryTags.length > 0 && (
+                <select
+                  value={selectedDietary}
+                  onChange={(e) => setSelectedDietary(e.target.value)}
+                  className="shrink-0 rounded-full bg-zinc-900 border border-zinc-800 px-3 py-1.5 text-xs text-zinc-300 focus:outline-none"
+                  aria-label="Filter by dietary preference"
+                >
+                  <option value="ALL">All Dietary</option>
+                  {allDietaryTags.map((tag) => (
+                    <option key={tag} value={tag}>
+                      {tag}
+                    </option>
+                  ))}
+                </select>
+              )}
+          </div>
+
           {categories.map((categoryName, catIdx) => {
             const sectionItems = filteredMenu.filter(
               (m) => m.category === categoryName
