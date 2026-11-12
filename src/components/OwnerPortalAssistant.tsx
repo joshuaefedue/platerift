@@ -19,7 +19,10 @@ import type {
   PortalTabId,
   RestaurantTenant,
 } from "@/lib/types";
-import type { OwnerUiAction } from "@/app/api/restaurants/[slug]/owner-assistant/route";
+import type {
+  OwnerAssistantState,
+  OwnerUiAction,
+} from "@/app/api/restaurants/[slug]/owner-assistant/route";
 
 interface AssistantMessage {
   id: string;
@@ -118,6 +121,7 @@ export function OwnerPortalAssistant({
   const [busy, setBusy] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [convState, setConvState] = useState<OwnerAssistantState>({});
 
   const activeOrderCount = orders.filter(
     (o) => o.status !== "completed" && o.status !== "cancelled"
@@ -133,17 +137,16 @@ export function OwnerPortalAssistant({
       id: "welcome_owner_ai",
       sender: "assistant",
       text:
-        `Hi **${restaurant.ownerName.split(" ")[0]}**! I'm your **Platerift Owner AI Agent** for **${restaurant.name}**.\n\n` +
-        `I can perform any task in your dashboard for you — manage live kitchen orders, add or 86 menu items, restock low inventory, pause/resume ordering, sync Square & Clover POS, or send SMS & email promos.`,
+        `Hi **${restaurant.ownerName.split(" ")[0]}**! Tell me any task and I'll execute it right away on **${restaurant.name}** — orders, menu items, stock, hours, staff, SMS/email, or POS sync.`,
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       }),
       quickReplies: [
+        "Check active orders",
         "Start preparing all confirmed orders",
-        "Open Add Menu modal",
+        "Show menu overview",
         "Restock all low stock items",
-        "Sync menu with Square and Clover",
       ],
     },
   ]);
@@ -244,11 +247,14 @@ export function OwnerPortalAssistant({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: trimmed }),
+            body: JSON.stringify({ message: trimmed, state: convState }),
           }
         );
         const data = await res.json();
         if (res.ok) {
+          if (data.state) {
+            setConvState(data.state);
+          }
           const uiActions: OwnerUiAction[] = data.uiActions || [];
           const executedTasks: string[] = data.executedTasks || [];
 
@@ -277,7 +283,7 @@ export function OwnerPortalAssistant({
         setBusy(false);
       }
     },
-    [busy, executeUiActions, onNotify, restaurant.slug, speakText]
+    [busy, convState, executeUiActions, onNotify, restaurant.slug, speakText]
   );
 
   const toggleVoiceInput = () => {
