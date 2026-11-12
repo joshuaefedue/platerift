@@ -32,6 +32,13 @@ import {
   buildDefaultPlatformIntegrationsConfig,
   buildSimulatedDoorDashTracking,
 } from "./integrationsDefaults";
+import {
+  getTursoCloudStatus,
+  pullTursoToLocalSqlite,
+  pushLocalSqliteToTurso,
+  scheduleTursoMirror,
+  type TursoSyncSummary,
+} from "./tursoSync";
 
 // On Vercel Serverless Functions, /var/task is read-only; use /tmp (os.tmpdir()) automatically
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
@@ -45,9 +52,11 @@ const DB_PATH = path.join(DATA_DIR, "saas.db");
 declare global {
   // eslint-disable-next-line no-var
   var __plateriftDb: DatabaseSync | undefined;
+  // eslint-disable-next-line no-var
+  var __plateriftTursoHydrated: boolean | undefined;
 }
 
-function getDb(): DatabaseSync {
+export function getDb(): DatabaseSync {
   if (!global.__plateriftDb) {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -67,12 +76,44 @@ function getDb(): DatabaseSync {
     seedUsersIfEmpty(db);
     seedCustomerHistoryAndReordersIfEmpty(db);
     global.__plateriftDb = db;
+
+    // Automatically hydrate from Turso on cold start (or push initial seed if Turso is empty)
+    if (!global.__plateriftTursoHydrated) {
+      global.__plateriftTursoHydrated = true;
+      pullTursoToLocalSqlite(db).catch(() => {
+        // Non-blocking cold-start hydration
+      });
+    }
   } else {
     initTables(global.__plateriftDb);
     seedUsersIfEmpty(global.__plateriftDb);
     seedCustomerHistoryAndReordersIfEmpty(global.__plateriftDb);
   }
   return global.__plateriftDb;
+}
+
+export async function syncWithTursoNow(
+  direction: "push" | "pull" | "bidirectional" = "bidirectional"
+): Promise<TursoSyncSummary> {
+  const db = getDb();
+  if (direction === "push") {
+    return pushLocalSqliteToTurso(db);
+  }
+  if (direction === "pull") {
+    return pullTursoToLocalSqlite(db);
+  }
+  // Bidirectional: pull any cloud-first records then push merged state back to Turso
+  await pullTursoToLocalSqlite(db);
+  const res = await pushLocalSqliteToTurso(db);
+  return {
+    ...res,
+    direction: "bidirectional",
+  };
+}
+
+export async function inspectTursoDatabase() {
+  const db = getDb();
+  return getTursoCloudStatus(db);
 }
 
 function initTables(db: DatabaseSync) {
@@ -2349,6 +2390,7 @@ export function createRestaurantTenant(
     title: "Restaurant Owner & Proprietor",
   });
 
+  scheduleTursoMirror(db);
   return newTenant;
 }
 
@@ -2550,6 +2592,7 @@ export function updateRestaurantTenant(
     existing.id
   );
 
+  scheduleTursoMirror(db);
   return getRestaurantBySlugOrDomain(existing.id);
 }
 
@@ -2623,6 +2666,7 @@ export function createMenuItem(
     item.sortOrder
   );
 
+  scheduleTursoMirror(db);
   return item;
 }
 
@@ -2723,12 +2767,14 @@ export function updateMenuItem(
     }
   }
 
+  scheduleTursoMirror(db);
   return merged;
 }
 
 export function deleteMenuItem(itemId: string): boolean {
   const db = getDb();
   const res = db.prepare("DELETE FROM menu_items WHERE id = ?").run(itemId);
+  scheduleTursoMirror(db);
   return res.changes > 0;
 }
 
@@ -2888,6 +2934,7 @@ export function createCustomerManual(
     cust.createdAt
   );
 
+  scheduleTursoMirror(db);
   return cust;
 }
 
@@ -2965,6 +3012,7 @@ export function updatePlatformTwilioConfig(
     "INSERT OR REPLACE INTO platform_settings (key, valueJson) VALUES ('twilio_gateway', ?)"
   ).run(JSON.stringify(merged));
 
+  scheduleTursoMirror(db);
   return merged;
 }
 
@@ -3040,6 +3088,7 @@ export function updatePlatformIntegrationsConfig(
     "INSERT OR REPLACE INTO platform_settings (key, valueJson) VALUES ('platform_integrations', ?)"
   ).run(JSON.stringify(merged));
 
+  scheduleTursoMirror(db);
   return merged;
 }
 
@@ -3094,6 +3143,7 @@ export function updateOrderIntegrationFields(
   const updatedRow = db
     .prepare("SELECT * FROM orders WHERE id = ?")
     .get(orderId) as Record<string, unknown>;
+  scheduleTursoMirror(db);
   return mapOrderRow(updatedRow);
 }
 
@@ -3432,6 +3482,7 @@ export function createOrder(
     }
   }
 
+  scheduleTursoMirror(db);
   return { order, smsSent: smsSent || ownerSmsSent, ownerSmsSent };
 }
 
@@ -3499,6 +3550,7 @@ export function updateOrderStatus(
     }
   }
 
+  scheduleTursoMirror(db);
   return { order: updated, smsSent };
 }
 
@@ -3550,6 +3602,7 @@ export function createSmsLog(input: {
     sms.createdAt
   );
 
+  scheduleTursoMirror(db);
   return sms;
 }
 
@@ -3626,6 +3679,7 @@ export function createEmailCampaign(input: {
     campaign.sentAt
   );
 
+  scheduleTursoMirror(db);
   return campaign;
 }
 
@@ -3965,6 +4019,7 @@ export function createUserAccount(input: {
     user.createdAt
   );
 
+  scheduleTursoMirror(db);
   return user;
 }
 
@@ -4014,12 +4069,14 @@ export function updateUserAccount(
     userId
   );
 
+  scheduleTursoMirror(db);
   return merged;
 }
 
 export function deleteUserAccount(userId: string): boolean {
   const db = getDb();
   const res = db.prepare("DELETE FROM users WHERE id = ?").run(userId);
+  scheduleTursoMirror(db);
   return res.changes > 0;
 }
 
@@ -4619,6 +4676,7 @@ export function authenticateOrRegisterCustomer(input: {
     newCust.createdAt
   );
 
+  scheduleTursoMirror(db);
   return newCust;
 }
 
@@ -4656,6 +4714,7 @@ export function updateCustomerProfile(
     customerId
   );
 
+  scheduleTursoMirror(db);
   return merged;
 }
 
@@ -4751,6 +4810,7 @@ export function createScheduledReorder(
     record.createdAt
   );
 
+  scheduleTursoMirror(db);
   return record;
 }
 
@@ -4790,6 +4850,7 @@ export function updateScheduledReorderStatus(
     id
   );
 
+  scheduleTursoMirror(db);
   return merged;
 }
 
@@ -4868,6 +4929,7 @@ export function triggerScheduledReorderNow(id: string): {
     .prepare("SELECT * FROM scheduled_reorders WHERE id = ?")
     .get(id) as Record<string, unknown>;
 
+  scheduleTursoMirror(db);
   return {
     order,
     smsSent,

@@ -79,6 +79,17 @@ export default function SuperAdminDashboard() {
   const [platformIntegrations, setPlatformIntegrations] =
     useState<PlatformIntegrationsConfig | null>(null);
   const [platformSmsLogs, setPlatformSmsLogs] = useState<SmsLog[]>([]);
+  const [tursoStatus, setTursoStatus] = useState<{
+    configured: boolean;
+    connected: boolean;
+    tursoHost: string;
+    envVarDetected: string;
+    localCounts: Record<string, number>;
+    tursoCounts: Record<string, number>;
+    lastCheckedAt: string;
+    error?: string;
+  } | null>(null);
+  const [syncingTurso, setSyncingTurso] = useState(false);
   const [adminView, setAdminView] = useState<
     "tenants" | "users" | "twilio" | "integrations"
   >("tenants");
@@ -144,16 +155,18 @@ export default function SuperAdminDashboard() {
   const fetchRestaurants = async () => {
     setLoading(true);
     try {
-      const [restRes, usrRes, twilioRes, intRes] = await Promise.all([
+      const [restRes, usrRes, twilioRes, intRes, tursoRes] = await Promise.all([
         fetch("/api/restaurants", { cache: "no-store" }),
         fetch("/api/users", { cache: "no-store" }),
         fetch("/api/platform/twilio", { cache: "no-store" }),
         fetch("/api/platform/integrations", { cache: "no-store" }),
+        fetch("/api/platform/turso-sync", { cache: "no-store" }),
       ]);
       const data = await restRes.json();
       const usrData = await usrRes.json();
       const twilioData = await twilioRes.json();
       const intData = await intRes.json();
+      const tursoData = await tursoRes.json().catch(() => null);
       if (data.restaurants) {
         setRestaurants(data.restaurants);
       }
@@ -169,10 +182,46 @@ export default function SuperAdminDashboard() {
       if (intData.config) {
         setPlatformIntegrations(intData.config);
       }
+      if (tursoData) {
+        setTursoStatus(tursoData);
+      }
     } catch (e) {
       console.error("Failed to fetch restaurants/users:", e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTursoSync = async (
+    direction: "push" | "pull" | "bidirectional"
+  ) => {
+    setSyncingTurso(true);
+    try {
+      const res = await fetch("/api/platform/turso-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ direction }),
+      });
+      const data = await res.json();
+      if (data.status) {
+        setTursoStatus(data.status);
+      }
+      await fetchRestaurants();
+      if (data.syncResult?.connected) {
+        showToastMessage(
+          `☁️ Turso Cloud DB Sync (${direction}) complete! All 9 tables synced.`
+        );
+      } else {
+        showToastMessage(
+          `⚠️ ${
+            data.syncResult?.error ||
+            data.error ||
+            "Add TURSO_DATABASE_URL & TURSO_AUTH_TOKEN in Vercel Environment Variables."
+          }`
+        );
+      }
+    } finally {
+      setSyncingTurso(false);
     }
   };
 
@@ -950,6 +999,94 @@ export default function SuperAdminDashboard() {
               <p className="mt-1 text-xs text-purple-400">
                 Segmented for SMS & Email blasts
               </p>
+            </div>
+          </div>
+
+          {/* Turso Cloud Database Live Sync Bar */}
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <span
+                className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                  tursoStatus?.connected
+                    ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]"
+                    : tursoStatus?.configured
+                    ? "bg-amber-400"
+                    : "bg-slate-500"
+                }`}
+              />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-white">
+                    Turso Cloud SQLite / libSQL Sync
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      tursoStatus?.connected
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    }`}
+                  >
+                    {tursoStatus?.connected
+                      ? "CONNECTED & AUTO-SYNCING"
+                      : "WAITING FOR TURSO ENV VARS"}
+                  </span>
+                </div>
+                <p className="truncate text-[11px] text-slate-400 mt-0.5">
+                  {tursoStatus?.connected ? (
+                    <>
+                      Host: <span className="font-mono text-slate-300">{tursoStatus.tursoHost}</span> • Cloud Rows:{" "}
+                      <strong className="text-emerald-300">
+                        {tursoStatus.tursoCounts?.restaurants ?? 0}
+                      </strong>{" "}
+                      restaurants,{" "}
+                      <strong className="text-emerald-300">
+                        {tursoStatus.tursoCounts?.menu_items ?? 0}
+                      </strong>{" "}
+                      dishes,{" "}
+                      <strong className="text-emerald-300">
+                        {tursoStatus.tursoCounts?.orders ?? 0}
+                      </strong>{" "}
+                      orders
+                    </>
+                  ) : (
+                    <>
+                      Ensure <code className="text-orange-300">TURSO_DATABASE_URL</code> &amp;{" "}
+                      <code className="text-orange-300">TURSO_AUTH_TOKEN</code> are connected to your Vercel project, then click{" "}
+                      <strong className="text-white">Sync All to Turso</strong>.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={syncingTurso}
+                onClick={() => handleTursoSync("bidirectional")}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${syncingTurso ? "animate-spin" : ""}`}
+                />
+                <span>{syncingTurso ? "Syncing..." : "Sync All Data with Turso"}</span>
+              </button>
+              <button
+                type="button"
+                disabled={syncingTurso}
+                onClick={() => handleTursoSync("push")}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50 transition"
+              >
+                <span>Push Local → Turso</span>
+              </button>
+              <button
+                type="button"
+                disabled={syncingTurso}
+                onClick={() => handleTursoSync("pull")}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50 transition"
+              >
+                <span>Pull Turso → Local</span>
+              </button>
             </div>
           </div>
         </div>
