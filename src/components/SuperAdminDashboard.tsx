@@ -849,6 +849,13 @@ export default function SuperAdminDashboard() {
                   {restaurants.length} Custom Domains Active
                 </span>
               </div>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-2 sm:px-3 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition"
+              >
+                <Globe className="h-3.5 w-3.5 text-orange-400" />
+                <span className="hidden sm:inline">Marketing Site</span>
+              </Link>
               <button
                 onClick={fetchRestaurants}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-2 sm:px-3 text-xs font-medium text-slate-300 hover:bg-slate-800 transition"

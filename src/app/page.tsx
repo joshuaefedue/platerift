@@ -1,5 +1,5 @@
-import SuperAdminDashboard from "@/components/SuperAdminDashboard";
+import MarketingLandingPage from "@/components/MarketingLandingPage";
 
 export default function HomePage() {
-  return <SuperAdminDashboard />;
+  return <MarketingLandingPage />;
 }
