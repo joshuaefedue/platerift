@@ -249,6 +249,7 @@ export default function CustomerOrderingStorefront() {
     async (overrideDay?: string, overrideTime?: string) => {
       try {
         const query = new URLSearchParams();
+        query.set("view", "storefront");
         if (overrideDay) query.set("simDay", overrideDay);
         if (overrideTime) query.set("simTime", overrideTime);
 

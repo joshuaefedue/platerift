@@ -8,11 +8,12 @@ import {
   listAllPlatformSmsLogs,
   updatePlatformTwilioConfig,
 } from "@/lib/db";
+import { sanitizePlatformTwilioForClient } from "@/lib/security";
 
 export async function GET() {
   try {
     await hydrateFromTursoIfNeeded();
-    const config = getPlatformTwilioConfig();
+    const config = sanitizePlatformTwilioForClient(getPlatformTwilioConfig());
     const recentSmsLogs = listAllPlatformSmsLogs(50);
     return NextResponse.json({
       config,
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
     await commitToTurso();
     const recentSmsLogs = listAllPlatformSmsLogs(50);
     return NextResponse.json({
-      config: updated,
+      config: sanitizePlatformTwilioForClient(updated),
       recentSmsLogs,
     });
   } catch (error) {

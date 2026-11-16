@@ -7,6 +7,7 @@ import type {
   RestaurantTenant,
   SquareIntegrationConfig,
 } from "./types";
+import { createSignedOAuthState } from "./security";
 
 // ============================================================================
 // 1. SQUARE OAUTH 2.0, CATALOG API, ORDERS API & PAYMENTS API CLIENT
@@ -118,7 +119,9 @@ export function buildSquareOAuthAuthorizeUrl(params: {
   const redirectUri = encodeURIComponent(
     `${redirectOrigin}/api/oauth/square/callback`
   );
-  const state = encodeURIComponent(params.restaurantSlug);
+  const state = encodeURIComponent(
+    createSignedOAuthState(params.restaurantSlug)
+  );
 
   return `${resolved.baseUrl}/oauth2/authorize?client_id=${encodeURIComponent(
     resolved.applicationId
@@ -590,7 +593,9 @@ export function buildCloverOAuthAuthorizeUrl(params: {
   const redirectUri = encodeURIComponent(
     `${redirectOrigin}/api/oauth/clover/callback`
   );
-  const state = encodeURIComponent(params.restaurantSlug);
+  const state = encodeURIComponent(
+    createSignedOAuthState(params.restaurantSlug)
+  );
 
   return `${authHost}/oauth/v2/authorize?client_id=${encodeURIComponent(
     resolved.appId
@@ -870,3 +875,4 @@ export async function createCloverChargeAndAtomicOrder(params: {
     } to Clover POS & Kitchen Printer (Merchant ${resolved.merchantId}).`,
   };
 }
+

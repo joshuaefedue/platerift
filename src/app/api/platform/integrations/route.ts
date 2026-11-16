@@ -8,11 +8,14 @@ import {
   updatePlatformIntegrationsConfig,
   updateRestaurantTenant,
 } from "@/lib/db";
+import { sanitizePlatformIntegrationsForClient } from "@/lib/security";
 
 export async function GET() {
   try {
     await hydrateFromTursoIfNeeded();
-    const config = getPlatformIntegrationsConfig();
+    const config = sanitizePlatformIntegrationsForClient(
+      getPlatformIntegrationsConfig()
+    );
     const restaurants = listRestaurants();
     return NextResponse.json({
       config,
@@ -116,7 +119,7 @@ export async function POST(req: NextRequest) {
     await commitToTurso();
     return NextResponse.json({
       ok: true,
-      config: updated,
+      config: sanitizePlatformIntegrationsForClient(updated),
     });
   } catch (err) {
     console.error("Error updating platform integrations:", err);

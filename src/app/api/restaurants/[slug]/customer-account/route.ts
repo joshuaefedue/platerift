@@ -67,11 +67,18 @@ export async function GET(
         )
       : [];
 
+    const safeDemoCustomers = allCustomers.slice(0, 6).map((c) => ({
+      ...c,
+      phone: c.phone ? `${c.phone.slice(0, -4)}••••` : "",
+      defaultAddress: c.defaultAddress ? "Saved on file" : "",
+      notes: "",
+    }));
+
     return NextResponse.json({
       customer: activeCustomer,
       orders,
       scheduledReorders,
-      demoCustomers: allCustomers,
+      demoCustomers: safeDemoCustomers,
     });
   } catch (error) {
     console.error("GET customer-account error:", error);

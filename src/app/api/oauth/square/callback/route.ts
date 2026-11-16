@@ -8,13 +8,22 @@ import {
   updateRestaurantTenant,
 } from "@/lib/db";
 import { buildDefaultIntegrationsConfig } from "@/lib/integrationsDefaults";
+import { verifySignedOAuthState } from "@/lib/security";
 import { exchangeOrRefreshSquareOAuthToken } from "@/lib/squareCloverPosClient";
 
 export async function GET(req: NextRequest) {
   try {
     await hydrateFromTursoIfNeeded();
     const code = req.nextUrl.searchParams.get("code") || "";
-    const stateSlug = req.nextUrl.searchParams.get("state") || "bella-napoli";
+    const rawState = req.nextUrl.searchParams.get("state") || "bella-napoli";
+    const verifiedState = verifySignedOAuthState(rawState);
+    if (!verifiedState.valid) {
+      return NextResponse.json(
+        { error: "Invalid or expired OAuth CSRF state signature" },
+        { status: 403 }
+      );
+    }
+    const stateSlug = verifiedState.slug;
 
     const restaurant =
       getRestaurantBySlugOrDomain(stateSlug) || listRestaurants()[0];
@@ -87,3 +96,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
 }
+

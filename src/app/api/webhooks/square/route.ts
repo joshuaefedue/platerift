@@ -10,6 +10,7 @@ import {
   updateRestaurantTenant,
 } from "@/lib/db";
 import { buildDefaultIntegrationsConfig } from "@/lib/integrationsDefaults";
+import { verifySquareWebhookSignature } from "@/lib/security";
 import { searchSquareCatalogObjects } from "@/lib/squareCloverPosClient";
 
 export async function GET() {
@@ -33,7 +34,25 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     await hydrateFromTursoIfNeeded();
-    const body = await req.json();
+    const rawBody = await req.text();
+    const body = JSON.parse(rawBody || "{}");
+    const platformConfig = getPlatformIntegrationsConfig();
+    const sigHeader = req.headers.get("x-square-hmacsha256-signature");
+
+    if (
+      !verifySquareWebhookSignature({
+        rawBody,
+        signatureHeader: sigHeader,
+        signatureKey: platformConfig.square.webhookSignatureKey,
+        notificationUrl: platformConfig.square.webhookUrl,
+      })
+    ) {
+      return NextResponse.json(
+        { error: "Invalid Square HMAC-SHA256 webhook signature" },
+        { status: 401 }
+      );
+    }
+
     const eventType = String(body.type || "inventory.count.updated");
     const locationId = String(body.location_id || body.merchant_id || "");
     const restaurantSlug = String(body.restaurant_slug || "");
@@ -44,7 +63,6 @@ export async function POST(req: NextRequest) {
     );
 
     const allRestaurants = listRestaurants();
-    const platformConfig = getPlatformIntegrationsConfig();
     const targetRestaurant =
       (restaurantSlug
         ? getRestaurantBySlugOrDomain(restaurantSlug)

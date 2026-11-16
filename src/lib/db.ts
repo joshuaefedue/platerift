@@ -41,6 +41,7 @@ import {
   scheduleTursoMirror,
   type TursoSyncSummary,
 } from "./tursoSync";
+import { preserveIfMasked, sanitizeHtmlContent } from "./security";
 
 // On Vercel Serverless Functions, /var/task is read-only; use /tmp (os.tmpdir()) automatically
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
@@ -3018,6 +3019,7 @@ export function updatePlatformTwilioConfig(
   const merged: PlatformTwilioConfig = {
     ...current,
     ...updates,
+    authToken: preserveIfMasked(updates.authToken, current.authToken),
     updatedAt: new Date().toISOString(),
   };
 
@@ -3092,18 +3094,38 @@ export function updatePlatformIntegrationsConfig(
     doordashDrive: {
       ...current.doordashDrive,
       ...(updates.doordashDrive || {}),
+      partnerSigningSecret: preserveIfMasked(
+        updates.doordashDrive?.partnerSigningSecret,
+        current.doordashDrive.partnerSigningSecret
+      ),
     },
     square: {
       ...current.square,
       ...(updates.square || {}),
+      partnerClientSecret: preserveIfMasked(
+        updates.square?.partnerClientSecret,
+        current.square.partnerClientSecret
+      ),
+      webhookSignatureKey: preserveIfMasked(
+        updates.square?.webhookSignatureKey,
+        current.square.webhookSignatureKey
+      ),
     },
     clover: {
       ...current.clover,
       ...(updates.clover || {}),
+      appSecret: preserveIfMasked(
+        updates.clover?.appSecret,
+        current.clover.appSecret
+      ),
     },
     vapi: {
       ...current.vapi,
       ...(updates.vapi || {}),
+      masterPrivateKey: preserveIfMasked(
+        updates.vapi?.masterPrivateKey,
+        current.vapi.masterPrivateKey
+      ),
     },
     updatedAt: new Date().toISOString(),
   };
@@ -3667,12 +3689,12 @@ export function createEmailCampaign(input: {
   const campaign: EmailCampaign = {
     id: `camp_${Date.now()}`,
     restaurantId: input.restaurantId,
-    name: input.name,
-    subject: input.subject,
+    name: sanitizeHtmlContent(input.name),
+    subject: sanitizeHtmlContent(input.subject),
     segment: input.segment,
     promoCode: input.promoCode,
     discountPercent: input.discountPercent,
-    bodyHtml: input.bodyHtml,
+    bodyHtml: sanitizeHtmlContent(input.bodyHtml),
     status: "sent",
     recipientCount,
     openRate: Number((48 + Math.random() * 22).toFixed(1)),

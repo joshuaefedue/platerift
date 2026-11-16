@@ -19,12 +19,22 @@ import {
   createCloverChargeAndAtomicOrder,
   createSquareOrderAndPayment,
 } from "@/lib/squareCloverPosClient";
+import { checkRateLimit } from "@/lib/security";
+import type { OrderLineItem } from "@/lib/types";
 
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const rate = checkRateLimit(req, "order_checkout", 30, 60_000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many checkout requests. Please wait a moment and try again." },
+        { status: 429 }
+      );
+    }
+
     await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
@@ -57,9 +67,18 @@ export async function POST(
       }
     }
 
-    // 2. Verify all items are currently available
+    // 2. Verify all items are currently available and recalculate authoritative server-side prices
     const menuItems = listMenuItems(restaurant.id);
-    for (const line of body.items || []) {
+    const rawItems: OrderLineItem[] = Array.isArray(body.items) ? body.items : [];
+    if (rawItems.length === 0) {
+      return NextResponse.json(
+        { error: "Your order must contain at least one menu item." },
+        { status: 400 }
+      );
+    }
+
+    const verifiedItems: OrderLineItem[] = [];
+    for (const line of rawItems) {
       const mItem = menuItems.find((m) => m.id === line.menuItemId);
       if (mItem && !mItem.available) {
         return NextResponse.json(
@@ -71,7 +90,51 @@ export async function POST(
           { status: 400 }
         );
       }
+      const safeQty = Math.min(99, Math.max(1, Math.round(Number(line.quantity) || 1)));
+      const authoritativeUnitPrice = mItem
+        ? mItem.price
+        : Math.max(0, Number(line.unitPrice) || 0);
+      const safeMods = Array.isArray(line.selectedModifiers)
+        ? line.selectedModifiers.map((mod) => ({
+            groupName: String(mod.groupName || ""),
+            optionLabel: String(mod.optionLabel || ""),
+            priceDelta: Math.max(0, Number(mod.priceDelta) || 0),
+          }))
+        : [];
+      const modTotalDelta = safeMods.reduce((s, m) => s + m.priceDelta, 0);
+      const itemTotal = Number(
+        ((authoritativeUnitPrice + modTotalDelta) * safeQty).toFixed(2)
+      );
+      verifiedItems.push({
+        menuItemId: line.menuItemId,
+        name: mItem ? mItem.name : String(line.name || "Menu Item"),
+        quantity: safeQty,
+        unitPrice: authoritativeUnitPrice,
+        selectedModifiers: safeMods,
+        itemTotal,
+        notes: line.notes ? String(line.notes).slice(0, 300) : undefined,
+      });
     }
+
+    const computedSubtotal = Number(
+      verifiedItems.reduce((s, i) => s + i.itemTotal, 0).toFixed(2)
+    );
+    const safeDiscount = Math.min(
+      computedSubtotal * 0.5,
+      Math.max(0, Number(body.discount) || 0)
+    );
+    const discountedSub = Math.max(0, computedSubtotal - safeDiscount);
+    const computedTax = Number(
+      (
+        (discountedSub * (restaurant.paymentConfig.taxRatePercent || 0)) /
+        100
+      ).toFixed(2)
+    );
+    const safeDeliveryFee = Math.max(0, Number(body.deliveryFee) || 0);
+    const safeTip = Math.max(0, Number(body.tip) || 0);
+    const computedTotal = Number(
+      (discountedSub + computedTax + safeDeliveryFee + safeTip).toFixed(2)
+    );
 
     // 2.2 Verify requested fulfillment option is enabled by the restaurant owner
     const requestedOrderType = body.orderType || "pickup";
@@ -252,13 +315,13 @@ export async function POST(
         const dispatchRes = await createDoorDashDriveDelivery({
           restaurant,
           orderNumber: `DD-${randToken}`,
-          orderSubtotal: Number(body.subtotal || 0),
+          orderSubtotal: computedSubtotal,
           customerName: body.customerName,
           customerPhone: body.customerPhone,
           deliveryAddress: body.deliveryAddress || "",
           dropoffInstructions: body.specialInstructions || "",
-          tipAmount: Number(body.tip || 0),
-          items: body.items || [],
+          tipAmount: safeTip,
+          items: verifiedItems,
           platformConfig: platformIntegrations.doordashDrive,
         });
         preDispatchedDeliveryTracking = dispatchRes.tracking;
@@ -290,9 +353,9 @@ export async function POST(
         customerName: body.customerName,
         customerPhone: body.customerPhone,
         deliveryAddress: body.deliveryAddress,
-        items: body.items || [],
-        totalAmountDollars: Number(body.total || 0),
-        tipAmountDollars: Number(body.tip || 0),
+        items: verifiedItems,
+        totalAmountDollars: computedTotal,
+        tipAmountDollars: safeTip,
         sourceIdToken:
           method === "square"
             ? String(body.paymentToken || "cnon:card-nonce-ok")
@@ -319,10 +382,10 @@ export async function POST(
       const clvRes = await createCloverChargeAndAtomicOrder({
         restaurant,
         orderNumber: randToken,
-        items: body.items || [],
-        totalAmountDollars: Number(body.total || 0),
-        taxAmountDollars: Number(body.tax || 0),
-        tipAmountDollars: Number(body.tip || 0),
+        items: verifiedItems,
+        totalAmountDollars: computedTotal,
+        taxAmountDollars: computedTax,
+        tipAmountDollars: safeTip,
         cardToken:
           method === "clover"
             ? String(body.paymentToken || `clv_tok_${randToken.toLowerCase()}`)
@@ -341,24 +404,27 @@ export async function POST(
 
     const result = createOrder({
       restaurantId: restaurant.id,
-      customerName: body.customerName,
-      customerEmail: body.customerEmail,
-      customerPhone: body.customerPhone,
+      customerName: String(body.customerName || "Guest").slice(0, 120),
+      customerEmail: String(body.customerEmail || "guest@example.com").slice(
+        0,
+        160
+      ),
+      customerPhone: String(body.customerPhone || "").slice(0, 40),
       orderType: body.orderType || "pickup",
       tableNumber: body.tableNumber,
       deliveryAddress: body.deliveryAddress,
-      items: body.items,
-      subtotal: Number(body.subtotal),
-      tax: Number(body.tax),
-      deliveryFee: Number(body.deliveryFee || 0),
-      tip: Number(body.tip || 0),
-      discount: Number(body.discount || 0),
-      total: Number(body.total),
+      items: verifiedItems,
+      subtotal: computedSubtotal,
+      tax: computedTax,
+      deliveryFee: safeDeliveryFee,
+      tip: safeTip,
+      discount: safeDiscount,
+      total: computedTotal,
       paymentMethod: method,
       paymentStatus: "paid",
       paymentReference,
       status: "confirmed",
-      specialInstructions: body.specialInstructions || "",
+      specialInstructions: String(body.specialInstructions || "").slice(0, 500),
       scheduledFor: body.scheduledFor,
       deliveryTracking: preDispatchedDeliveryTracking,
       posSync: preSyncedPos,

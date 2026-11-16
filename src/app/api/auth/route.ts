@@ -6,9 +6,21 @@ import {
   listCustomerOrders,
   listScheduledReorders,
 } from "@/lib/db";
+import { checkRateLimit } from "@/lib/security";
 
 export async function POST(req: NextRequest) {
   try {
+    const rate = checkRateLimit(req, "auth_attempt", 15, 60_000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            "Too many login attempts from this IP. Please wait 60 seconds and try again.",
+        },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const actor = body.actor || "customer";
 
