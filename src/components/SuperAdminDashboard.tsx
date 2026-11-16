@@ -3363,7 +3363,7 @@ export default function SuperAdminDashboard() {
                   <span className="truncate">
                     {dnsModalTenant.customDomain.split(".")[0] || "orders"}
                   </span>
-                  <span className="truncate">cname.platerift.app</span>
+                  <span className="truncate">cname.platerift.com</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 font-mono text-slate-200">
                   <span className="text-emerald-400">A</span>

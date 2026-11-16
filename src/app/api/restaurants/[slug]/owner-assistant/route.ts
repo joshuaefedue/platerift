@@ -1706,7 +1706,7 @@ export async function POST(
         .join("\n");
       replyText = `👥 **Kitchen & Cashier Staff (${staff.length})**:\n${staffLines}`;
       quickReplies = [
-        "Add staff Tunde Bakare tunde@platerift.app",
+        "Add staff Tunde Bakare tunde@platerift.com",
         "Check active orders",
       ];
       return NextResponse.json({

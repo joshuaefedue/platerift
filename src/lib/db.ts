@@ -386,27 +386,28 @@ function initTables(db: DatabaseSync) {
     // Column already exists
   }
 
-  // Migrate any legacy RestoSaaS branding in existing database rows to Platerift
+  // Migrate any legacy RestoSaaS or platerift.app branding in existing database rows to platerift.com
   try {
     db.exec(`
       UPDATE restaurants
-      SET subdomain = REPLACE(subdomain, '.restosaas.app', '.platerift.app'),
+      SET subdomain = REPLACE(REPLACE(subdomain, '.restosaas.app', '.platerift.com'), '.platerift.app', '.platerift.com'),
           dnsTxtToken = REPLACE(dnsTxtToken, 'restosaas-verify=', 'platerift-verify='),
           storefrontPagesJson = REPLACE(storefrontPagesJson, 'RestoSaaS', 'Platerift'),
           integrationsConfigJson = REPLACE(REPLACE(integrationsConfigJson, 'restosaas', 'platerift'), 'RESTOSAAS', 'PLATERIFT')
       WHERE subdomain LIKE '%restosaas%'
+         OR subdomain LIKE '%.platerift.app%'
          OR dnsTxtToken LIKE '%restosaas%'
          OR storefrontPagesJson LIKE '%RestoSaaS%'
          OR integrationsConfigJson LIKE '%restosaas%'
          OR integrationsConfigJson LIKE '%RESTOSAAS%';
 
       UPDATE users
-      SET email = REPLACE(email, '@restosaas.app', '@platerift.app')
-      WHERE email LIKE '%@restosaas.app%';
+      SET email = REPLACE(REPLACE(email, '@restosaas.app', '@platerift.com'), '@platerift.app', '@platerift.com')
+      WHERE email LIKE '%@restosaas.app%' OR email LIKE '%@platerift.app%';
 
       UPDATE platform_settings
-      SET valueJson = REPLACE(REPLACE(REPLACE(valueJson, 'RestoSaaS', 'Platerift'), 'restosaas', 'platerift'), 'RESTOSAAS', 'PLATERIFT')
-      WHERE valueJson LIKE '%restosaas%' OR valueJson LIKE '%RestoSaaS%' OR valueJson LIKE '%RESTOSAAS%';
+      SET valueJson = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(valueJson, 'https://api.platerift.app', 'https://platerift.com'), 'platerift.app', 'platerift.com'), 'RestoSaaS', 'Platerift'), 'restosaas', 'platerift'), 'RESTOSAAS', 'PLATERIFT')
+      WHERE valueJson LIKE '%platerift.app%' OR valueJson LIKE '%restosaas%' OR valueJson LIKE '%RestoSaaS%' OR valueJson LIKE '%RESTOSAAS%';
     `);
   } catch {
     // Ignore if tables are being initialized
@@ -541,7 +542,7 @@ function seedIfEmpty(db: DatabaseSync) {
       plan: "enterprise",
       status: "active",
       customDomain: "orders.bellanapoli.com",
-      subdomain: "bella-napoli.platerift.app",
+      subdomain: "bella-napoli.platerift.com",
       domainVerified: true,
       sslStatus: "active",
       dnsTxtToken: "platerift-verify=bn9812fa772c",
@@ -663,7 +664,7 @@ function seedIfEmpty(db: DatabaseSync) {
       plan: "growth",
       status: "active",
       customDomain: "eat.sakurasushi.io",
-      subdomain: "sakura-sushi.platerift.app",
+      subdomain: "sakura-sushi.platerift.com",
       domainVerified: true,
       sslStatus: "active",
       dnsTxtToken: "platerift-verify=sk4491bc109a",
@@ -785,7 +786,7 @@ function seedIfEmpty(db: DatabaseSync) {
       plan: "starter",
       status: "active",
       customDomain: "tacos.fuegotaqueria.com",
-      subdomain: "fuego-taqueria.platerift.app",
+      subdomain: "fuego-taqueria.platerift.com",
       domainVerified: false,
       sslStatus: "pending",
       dnsTxtToken: "platerift-verify=fg5519tx883b",
@@ -2139,7 +2140,7 @@ export function createRestaurantTenant(
     status: input.status || "active",
     customDomain:
       input.customDomain || `orders.${slug.replace(/-/g, "")}.com`,
-    subdomain: `${slug}.platerift.app`,
+    subdomain: `${slug}.platerift.com`,
     domainVerified: input.domainVerified ?? false,
     sslStatus: input.domainVerified ? "active" : "pending",
     dnsTxtToken: `platerift-verify=${Math.random().toString(36).substring(2, 12)}`,
@@ -3027,7 +3028,18 @@ export function getPlatformIntegrationsConfig(): PlatformIntegrationsConfig {
   const fallback = buildDefaultPlatformIntegrationsConfig();
   if (row?.valueJson) {
     try {
-      const parsed = JSON.parse(row.valueJson) as Partial<PlatformIntegrationsConfig>;
+      const normalizedJson = row.valueJson
+        .replace(/https:\/\/api\.platerift\.app/g, "https://platerift.com")
+        .replace(/platerift\.app/g, "platerift.com");
+      if (normalizedJson !== row.valueJson) {
+        db.prepare(
+          "INSERT OR REPLACE INTO platform_settings (key, valueJson) VALUES ('platform_integrations', ?)"
+        ).run(normalizedJson);
+        scheduleTursoMirror(db);
+      }
+      const parsed = JSON.parse(
+        normalizedJson
+      ) as Partial<PlatformIntegrationsConfig>;
       return {
         doordashDrive: {
           ...fallback.doordashDrive,
@@ -3697,7 +3709,7 @@ function seedUsersIfEmpty(db: DatabaseSync) {
       scope: "platform",
       restaurantId: null,
       name: "Jordan Sterling",
-      email: "founder@platerift.app",
+      email: "founder@platerift.com",
       phone: "+1 (415) 555-0101",
       role: "super_admin",
       status: "active",
@@ -3712,7 +3724,7 @@ function seedUsersIfEmpty(db: DatabaseSync) {
       scope: "platform",
       restaurantId: null,
       name: "Maya Lin",
-      email: "maya.ops@platerift.app",
+      email: "maya.ops@platerift.com",
       phone: "+1 (415) 555-0102",
       role: "platform_ops",
       status: "active",
@@ -3727,7 +3739,7 @@ function seedUsersIfEmpty(db: DatabaseSync) {
       scope: "platform",
       restaurantId: null,
       name: "Marcus Thorne",
-      email: "billing@platerift.app",
+      email: "billing@platerift.com",
       phone: "+1 (415) 555-0103",
       role: "billing_admin",
       status: "active",
@@ -3742,7 +3754,7 @@ function seedUsersIfEmpty(db: DatabaseSync) {
       scope: "platform",
       restaurantId: null,
       name: "Chloe Bennett",
-      email: "support@platerift.app",
+      email: "support@platerift.com",
       phone: "+1 (415) 555-0104",
       role: "support_agent",
       status: "active",

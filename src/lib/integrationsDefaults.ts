@@ -15,7 +15,7 @@ export function buildDefaultPlatformIntegrationsConfig(): PlatformIntegrationsCo
       partnerKeyId: "dd_key_master_sandbox_4412",
       partnerSigningSecret: "dd_secret_master_hs256_99812a",
       defaultFlatFeeQuote: 6.75,
-      webhookUrl: "https://api.platerift.app/api/webhooks/doordash",
+      webhookUrl: "https://platerift.com/api/webhooks/doordash",
     },
     square: {
       setupCompleted: true,
@@ -24,7 +24,7 @@ export function buildDefaultPlatformIntegrationsConfig(): PlatformIntegrationsCo
       partnerApplicationId: "sandbox-sq0idp-platerift-master-app",
       partnerClientSecret: "sq0csp-platerift-master-secret-8812",
       webhookSignatureKey: "sq_wh_master_sig_7719",
-      webhookUrl: "https://api.platerift.app/api/webhooks/square",
+      webhookUrl: "https://platerift.com/api/webhooks/square",
     },
     clover: {
       setupCompleted: true,
@@ -33,7 +33,7 @@ export function buildDefaultPlatformIntegrationsConfig(): PlatformIntegrationsCo
       appId: "CLV_APP_PLATERIFT_MARKET_01",
       appSecret: "clv_app_secret_master_5519",
       webhookVerificationCode: "clv_verify_master_2026",
-      webhookUrl: "https://api.platerift.app/api/webhooks/clover",
+      webhookUrl: "https://platerift.com/api/webhooks/clover",
     },
     vapi: {
       setupCompleted: true,
@@ -42,7 +42,7 @@ export function buildDefaultPlatformIntegrationsConfig(): PlatformIntegrationsCo
       masterPublicKey: "vapi_pub_master_platerift_8812",
       masterPrivateKey: "vapi_priv_master_platerift_9941",
       defaultVoiceModel: "elevenlabs-nigerian-warm-host",
-      serverWebhookUrl: "https://api.platerift.app/api/webhooks/vapi",
+      serverWebhookUrl: "https://platerift.com/api/webhooks/vapi",
     },
     updatedAt: "2026-11-08T18:00:00.000Z",
   };
