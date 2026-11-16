@@ -9,6 +9,10 @@ import {
 } from "@/lib/db";
 import { evaluateRestaurantAvailability } from "@/lib/availability";
 import { buildDefaultIntegrationsConfig } from "@/lib/integrationsDefaults";
+import {
+  createDoorDashDriveDelivery,
+  resolveDoorDashCredentials,
+} from "@/lib/doordashDriveClient";
 
 export async function POST(
   req: NextRequest,
@@ -220,6 +224,40 @@ export async function POST(
         ? `sq_pay_${slugShort}_${randToken}`
         : `clv_pay_${slugShort}_${randToken}`;
 
+    const doordashAllowed =
+      platformIntegrations.doordashDrive.setupCompleted &&
+      platformIntegrations.doordashDrive.availableToOwners &&
+      restaurant.features.doordashDrive !== false &&
+      intCfg.doordashDrive.enabled &&
+      intCfg.doordashDrive.autoDispatchOnConfirm;
+
+    let preDispatchedDeliveryTracking = undefined;
+    if (requestedOrderType === "delivery" && doordashAllowed) {
+      const ddCreds = resolveDoorDashCredentials(
+        intCfg.doordashDrive,
+        platformIntegrations.doordashDrive
+      );
+      if (
+        ddCreds.isRealKey ||
+        intCfg.doordashDrive.mode === "live" ||
+        platformIntegrations.doordashDrive.mode === "live"
+      ) {
+        const dispatchRes = await createDoorDashDriveDelivery({
+          restaurant,
+          orderNumber: `DD-${randToken}`,
+          orderSubtotal: Number(body.subtotal || 0),
+          customerName: body.customerName,
+          customerPhone: body.customerPhone,
+          deliveryAddress: body.deliveryAddress || "",
+          dropoffInstructions: body.specialInstructions || "",
+          tipAmount: Number(body.tip || 0),
+          items: body.items || [],
+          platformConfig: platformIntegrations.doordashDrive,
+        });
+        preDispatchedDeliveryTracking = dispatchRes.tracking;
+      }
+    }
+
     const result = createOrder({
       restaurantId: restaurant.id,
       customerName: body.customerName,
@@ -241,6 +279,7 @@ export async function POST(
       status: "confirmed",
       specialInstructions: body.specialInstructions || "",
       scheduledFor: body.scheduledFor,
+      deliveryTracking: preDispatchedDeliveryTracking,
     });
 
     return NextResponse.json(result, { status: 201 });

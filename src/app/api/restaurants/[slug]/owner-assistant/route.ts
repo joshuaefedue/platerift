@@ -16,11 +16,16 @@ import {
   listSmsLogs,
   listUsers,
   updateMenuItem,
+  updateOrderIntegrationFields,
   updateOrderStatus,
   updateRestaurantTenant,
   updateUserAccount,
 } from "@/lib/db";
 import { evaluateRestaurantAvailability } from "@/lib/availability";
+import {
+  createDoorDashDriveDelivery,
+  resolveDoorDashCredentials,
+} from "@/lib/doordashDriveClient";
 import { buildDefaultVariantAndSideGroups } from "@/lib/menuVariantsAndSides";
 import {
   InventoryItem,
@@ -1816,6 +1821,62 @@ export async function POST(
     // 10. PLUG & PLAY INTEGRATIONS (DOORDASH, SQUARE, CLOVER, VAPI)
     // =========================================================================
     if (
+      /\b(dispatch|call.*doordash|call.*driver|doordash.*driver|test.*doordash)\b/i.test(
+        lower
+      )
+    ) {
+      const targetOrder =
+        orders.find((o) => o.orderType === "delivery") || orders[0];
+      const orderNum =
+        targetOrder?.orderNumber ||
+        `DD-${Math.floor(1000 + Math.random() * 9000)}`;
+      const dispatchRes = await createDoorDashDriveDelivery({
+        restaurant,
+        orderNumber: orderNum,
+        orderSubtotal: targetOrder?.subtotal || 35,
+        customerName: targetOrder?.customerName || "Sandbox Test Customer",
+        customerPhone: targetOrder?.customerPhone || "+1 (650) 555-0199",
+        deliveryAddress:
+          targetOrder?.deliveryAddress ||
+          "901 Market Street, 6th Floor, San Francisco, CA 94103",
+        dropoffInstructions: targetOrder?.specialInstructions || "",
+        tipAmount: targetOrder?.tip || 5,
+        items: (targetOrder?.items || []).map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+        platformConfig: platformIntegrations.doordashDrive,
+      });
+
+      if (targetOrder) {
+        updateOrderIntegrationFields(targetOrder.id, {
+          deliveryTracking: dispatchRes.tracking,
+        });
+      }
+
+      executedTasks.push(
+        `Dispatched DoorDash Driver (${dispatchRes.tracking.dasherName}) for Order #${orderNum}`
+      );
+      uiActions.push({ type: "switch_tab", tab: "orders" });
+      uiActions.push({ type: "refresh_portal" });
+      replyText =
+        `🚗 **DoorDash Drive Dispatched for Order #${orderNum}**:\n` +
+        `- **Drive Delivery ID**: \`${dispatchRes.tracking.externalDeliveryId}\`\n` +
+        `- **Driver**: ${dispatchRes.tracking.dasherName} (${dispatchRes.tracking.dasherPhone})\n` +
+        `- **Quoted Fee**: **$${dispatchRes.tracking.feeTotal.toFixed(2)}** (Customer paid $${dispatchRes.tracking.customerFeeCharged.toFixed(2)}, Kitchen subsidy $${dispatchRes.tracking.restaurantSubsidy.toFixed(2)})\n` +
+        `- **API Status**: ${dispatchRes.apiMessage}`;
+      quickReplies = ["Check active orders", "Sync menu with Square and Clover"];
+      return NextResponse.json({
+        replyText,
+        executedTasks,
+        uiActions,
+        quickReplies,
+        state: nextState,
+      });
+    }
+
+    if (
       /\b(sync .* pos|sync .* square|sync .* clover|doordash|square|clover|vapi|plug & play|integrations)\b/i.test(
         lower
       )
@@ -1898,6 +1959,10 @@ export async function POST(
         uiActions.push({ type: "refresh_portal" });
         replyText = `🔄 Synced all **${menuItems.length} menu dishes** (${soldOutDishes.length} sold-out) with **Square POS** and **Clover POS**!`;
       } else {
+        const ddCreds = resolveDoorDashCredentials(
+          restaurant.integrationsConfig?.doordashDrive,
+          platformIntegrations.doordashDrive
+        );
         const ddReady =
           platformIntegrations.doordashDrive.setupCompleted &&
           platformIntegrations.doordashDrive.availableToOwners &&
@@ -1917,7 +1982,11 @@ export async function POST(
 
         replyText = `🔌 **Plug & Play Apps Status**:\n- **🚗 DoorDash Drive**: ${
           ddReady ? "✅ Active" : "⏸️ Disabled"
-        }\n- **⬛ Square POS**: ${
+        } (${
+          ddCreds.isRealKey
+            ? `Real API Credentials Detected via ${ddCreds.source}`
+            : "Sandbox / Simulated Mode"
+        })\n- **⬛ Square POS**: ${
           sqReady ? "✅ Connected" : "⏸️ Disabled"
         }\n- **🍀 Clover POS**: ${
           clvReady ? "✅ Connected" : "⏸️ Disabled"
@@ -1926,8 +1995,8 @@ export async function POST(
         }`;
       }
       quickReplies = [
+        "Call a DoorDash driver",
         "Sync menu with Square and Clover",
-        "Enable DoorDash Drive",
         "Check active orders",
       ];
       return NextResponse.json({

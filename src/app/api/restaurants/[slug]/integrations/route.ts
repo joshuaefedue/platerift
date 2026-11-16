@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createOrder,
+  getPlatformIntegrationsConfig,
   getRestaurantBySlugOrDomain,
   listMenuItems,
   listOrders,
@@ -12,6 +13,12 @@ import {
   buildSimulatedDoorDashTracking,
   buildVapiAssistantConfigPayload,
 } from "@/lib/integrationsDefaults";
+import {
+  createDoorDashDriveDelivery,
+  fetchOrCancelDoorDashDelivery,
+  generateDoorDashDriveJwt,
+  resolveDoorDashCredentials,
+} from "@/lib/doordashDriveClient";
 import { IntegrationActivityLog, OrderDeliveryTracking } from "@/lib/types";
 
 export async function POST(
@@ -44,6 +51,8 @@ export async function POST(
       ].slice(0, 30);
     };
 
+    const platformIntegrations = getPlatformIntegrationsConfig();
+
     // 1. Save / Update Integrations Config
     if (action === "save_config") {
       const nextConfig = body.integrationsConfig || currentConfig;
@@ -57,7 +66,47 @@ export async function POST(
       });
     }
 
-    // 2. Quote or Dispatch a DoorDash Drive Driver (for a specific order or a test quote)
+    // 1.5 Verify DoorDash Drive Sandbox / Live Credentials & JWT Signing
+    if (action === "verify_doordash_credentials") {
+      const creds = resolveDoorDashCredentials(
+        currentConfig.doordashDrive,
+        platformIntegrations.doordashDrive
+      );
+      if (!creds.developerId || !creds.keyId || !creds.signingSecret) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "Missing DoorDash Developer ID, Key ID, or Signing Secret. Enter them in the DoorDash card or Super Admin.",
+          },
+          { status: 400 }
+        );
+      }
+      const token = generateDoorDashDriveJwt(creds);
+      prependLog({
+        id: `intlog_${Date.now()}`,
+        integration: "doordash_drive",
+        action: `DoorDash JWT Verified (${creds.source})`,
+        status: "success",
+        summary: `Generated valid DD-JWT-V1 HS256 token for Developer ID ${creds.developerId.slice(
+          0,
+          12
+        )}... (Key ID: ${creds.keyId.slice(0, 10)}...). Ready for DoorDash Drive v2 API calls.`,
+        createdAt: now,
+      });
+      const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
+        integrationsConfig: currentConfig,
+      });
+      return NextResponse.json({
+        ok: true,
+        credentialSource: creds.source,
+        isRealKey: creds.isRealKey,
+        jwtPreview: `${token.slice(0, 28)}...${token.slice(-16)}`,
+        integrationsConfig: updatedRestaurant?.integrationsConfig,
+      });
+    }
+
+    // 2. Quote or Dispatch a DoorDash Drive Driver (Calls real DoorDash Drive v2 API when credentials are provided!)
     if (action === "dispatch_doordash") {
       const orderId = body.orderId as string | undefined;
       const orders = listOrders(restaurant.id);
@@ -68,12 +117,32 @@ export async function POST(
       const orderNumber =
         targetOrder?.orderNumber ||
         `DD-${Math.floor(1000 + Math.random() * 9000)}`;
-      const tracking = buildSimulatedDoorDashTracking({
+
+      const dispatchRes = await createDoorDashDriveDelivery({
+        restaurant: {
+          ...restaurant,
+          integrationsConfig: currentConfig,
+        },
         orderNumber,
         orderSubtotal: targetOrder?.subtotal || 35,
-        config: currentConfig.doordashDrive,
-        stage: "dasher_confirmed",
+        customerName: targetOrder?.customerName || "Sandbox Test Customer",
+        customerPhone: targetOrder?.customerPhone || "+1 (650) 555-0199",
+        deliveryAddress:
+          targetOrder?.deliveryAddress ||
+          "901 Market Street, 6th Floor, San Francisco, CA 94103",
+        dropoffInstructions:
+          targetOrder?.specialInstructions ||
+          "Leave at front desk / ring bell.",
+        tipAmount: targetOrder?.tip || 5,
+        items: (targetOrder?.items || []).map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+        platformConfig: platformIntegrations.doordashDrive,
       });
+
+      const tracking = dispatchRes.tracking;
 
       let updatedOrder = null;
       if (targetOrder) {
@@ -85,9 +154,11 @@ export async function POST(
       prependLog({
         id: `intlog_${Date.now()}`,
         integration: "doordash_drive",
-        action: "Dasher Dispatched",
+        action: dispatchRes.usedLiveApi
+          ? "DoorDash Drive v2 API Dispatched"
+          : "Dasher Dispatched (Sandbox/Sim)",
         status: "success",
-        summary: `Dispatched DoorDash Driver (${tracking.dasherName}) for Order #${orderNumber} • Drive ID: ${tracking.externalDeliveryId} • Quoted Fee: $${tracking.feeTotal.toFixed(
+        summary: `${dispatchRes.apiMessage} • Order #${orderNumber} • Drive ID: ${tracking.externalDeliveryId} • Quoted Fee: $${tracking.feeTotal.toFixed(
           2
         )} (Customer paid $${tracking.customerFeeCharged.toFixed(
           2
@@ -101,7 +172,76 @@ export async function POST(
 
       return NextResponse.json({
         ok: true,
+        usedLiveApi: dispatchRes.usedLiveApi,
+        apiMessage: dispatchRes.apiMessage,
+        credentialSource: dispatchRes.credentialSource,
         tracking,
+        updatedOrder,
+        integrationsConfig: updatedRestaurant?.integrationsConfig,
+        orders: listOrders(restaurant.id),
+      });
+    }
+
+    // 2.5 Sync Live Status or Cancel Delivery on DoorDash Drive v2 API
+    if (
+      action === "sync_doordash_delivery" ||
+      action === "cancel_doordash_delivery"
+    ) {
+      const orderId = String(body.orderId || "");
+      const orders = listOrders(restaurant.id);
+      const targetOrder = orders.find((o) => o.id === orderId) || orders[0];
+      if (!targetOrder || !targetOrder.deliveryTracking?.externalDeliveryId) {
+        return NextResponse.json(
+          { error: "No active DoorDash delivery found on this order" },
+          { status: 404 }
+        );
+      }
+
+      const apiRes = await fetchOrCancelDoorDashDelivery({
+        restaurant: { ...restaurant, integrationsConfig: currentConfig },
+        externalDeliveryId: targetOrder.deliveryTracking.externalDeliveryId,
+        action:
+          action === "cancel_doordash_delivery" ? "cancel" : "get_status",
+        platformConfig: platformIntegrations.doordashDrive,
+      });
+
+      const updatedTracking: OrderDeliveryTracking = {
+        ...targetOrder.deliveryTracking,
+        status: apiRes.status || targetOrder.deliveryTracking.status,
+        dasherName:
+          apiRes.dasherName || targetOrder.deliveryTracking.dasherName,
+        dasherPhone:
+          apiRes.dasherPhone || targetOrder.deliveryTracking.dasherPhone,
+        dasherVehicle:
+          apiRes.dasherVehicle || targetOrder.deliveryTracking.dasherVehicle,
+        trackingUrl:
+          apiRes.trackingUrl || targetOrder.deliveryTracking.trackingUrl,
+        updatedAt: now,
+      };
+
+      const updatedOrder = updateOrderIntegrationFields(targetOrder.id, {
+        deliveryTracking: updatedTracking,
+      });
+
+      prependLog({
+        id: `intlog_${Date.now()}`,
+        integration: "doordash_drive",
+        action:
+          action === "cancel_doordash_delivery"
+            ? "DoorDash Delivery Cancelled"
+            : "DoorDash Status Synced",
+        status: apiRes.ok ? "success" : "warning",
+        summary: apiRes.message,
+        createdAt: now,
+      });
+
+      const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
+        integrationsConfig: currentConfig,
+      });
+
+      return NextResponse.json({
+        ok: apiRes.ok,
+        message: apiRes.message,
         updatedOrder,
         integrationsConfig: updatedRestaurant?.integrationsConfig,
         orders: listOrders(restaurant.id),

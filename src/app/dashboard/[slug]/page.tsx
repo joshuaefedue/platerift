@@ -1873,38 +1873,81 @@ export default function RestaurantOwnerPortal() {
                                       Driver: {ord.deliveryTracking.dasherName} •
                                       ETA {ord.deliveryTracking.dropoffEtaMinutes}m
                                     </div>
-                                    {ord.deliveryTracking.status !== "delivered" && (
-                                      <button
-                                        type="button"
-                                        onClick={async () => {
-                                          const res = await fetch(
-                                            `/api/restaurants/${encodeURIComponent(
-                                              restaurant.slug
-                                            )}/integrations`,
-                                            {
-                                              method: "POST",
-                                              headers: {
-                                                "Content-Type": "application/json",
-                                              },
-                                              body: JSON.stringify({
-                                                action: "advance_doordash_status",
-                                                orderId: ord.id,
-                                              }),
-                                            }
-                                          );
-                                          const data = await res.json();
-                                          if (res.ok && Array.isArray(data.orders)) {
-                                            setOrders(data.orders);
-                                            notify(
-                                              `🚗 Updated DoorDash Driver status for Order #${ord.orderNumber}`
-                                            );
-                                          }
-                                        }}
-                                        className="w-full rounded bg-rose-500/25 border border-rose-500/40 px-2 py-1 text-[10px] font-bold text-rose-200 hover:bg-rose-500/35"
-                                      >
-                                        🚗 Advance Driver Status →
-                                      </button>
-                                    )}
+                                    {ord.deliveryTracking.status !==
+                                      "delivered" &&
+                                      ord.deliveryTracking.status !==
+                                        "cancelled" && (
+                                        <div className="grid grid-cols-2 gap-1 pt-0.5">
+                                          <button
+                                            type="button"
+                                            onClick={async () => {
+                                              const res = await fetch(
+                                                `/api/restaurants/${encodeURIComponent(
+                                                  restaurant.slug
+                                                )}/integrations`,
+                                                {
+                                                  method: "POST",
+                                                  headers: {
+                                                    "Content-Type":
+                                                      "application/json",
+                                                  },
+                                                  body: JSON.stringify({
+                                                    action:
+                                                      "advance_doordash_status",
+                                                    orderId: ord.id,
+                                                  }),
+                                                }
+                                              );
+                                              const data = await res.json();
+                                              if (
+                                                res.ok &&
+                                                Array.isArray(data.orders)
+                                              ) {
+                                                setOrders(data.orders);
+                                                notify(
+                                                  `🚗 Updated DoorDash Driver status for Order #${ord.orderNumber}`
+                                                );
+                                              }
+                                            }}
+                                            className="rounded bg-rose-500/25 border border-rose-500/40 px-1.5 py-1 text-[10px] font-bold text-rose-200 hover:bg-rose-500/35"
+                                          >
+                                            Advance →
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={async () => {
+                                              const res = await fetch(
+                                                `/api/restaurants/${encodeURIComponent(
+                                                  restaurant.slug
+                                                )}/integrations`,
+                                                {
+                                                  method: "POST",
+                                                  headers: {
+                                                    "Content-Type":
+                                                      "application/json",
+                                                  },
+                                                  body: JSON.stringify({
+                                                    action:
+                                                      "sync_doordash_delivery",
+                                                    orderId: ord.id,
+                                                  }),
+                                                }
+                                              );
+                                              const data = await res.json();
+                                              if (Array.isArray(data.orders)) {
+                                                setOrders(data.orders);
+                                              }
+                                              notify(
+                                                data.message ||
+                                                  `🔄 Synced DoorDash Drive API status for #${ord.orderNumber}`
+                                              );
+                                            }}
+                                            className="rounded bg-slate-900 border border-slate-700 px-1.5 py-1 text-[10px] font-semibold text-slate-300 hover:text-white"
+                                          >
+                                            Sync API
+                                          </button>
+                                        </div>
+                                      )}
                                   </>
                                 ) : (
                                   <button

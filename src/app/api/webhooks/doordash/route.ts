@@ -12,10 +12,15 @@ import {
   buildDefaultIntegrationsConfig,
   buildSimulatedDoorDashTracking,
 } from "@/lib/integrationsDefaults";
+import { resolveDoorDashCredentials } from "@/lib/doordashDriveClient";
 import { OrderDeliveryTracking } from "@/lib/types";
 
 export async function GET() {
   const platformConfig = getPlatformIntegrationsConfig();
+  const creds = resolveDoorDashCredentials(
+    undefined,
+    platformConfig.doordashDrive
+  );
   return NextResponse.json({
     endpoint: "/api/webhooks/doordash",
     provider: "DoorDash Drive API v2",
@@ -23,6 +28,8 @@ export async function GET() {
       ? "active"
       : "awaiting_admin_setup",
     mode: platformConfig.doordashDrive.mode,
+    credentialsConfigured: creds.isRealKey,
+    credentialSource: creds.source,
     supportedEvents: [
       "DASHER_CONFIRMED",
       "DASHER_CONFIRMED_STORE_ARRIVAL",

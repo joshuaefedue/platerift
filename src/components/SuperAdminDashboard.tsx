@@ -2397,6 +2397,52 @@ export default function SuperAdminDashboard() {
                       className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
                     />
                   </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400">
+                      Partner Signing Secret (HS256 Base64URL)
+                    </label>
+                    <input
+                      type="password"
+                      value={
+                        platformIntegrations.doordashDrive.partnerSigningSecret
+                      }
+                      onChange={(e) =>
+                        setPlatformIntegrations({
+                          ...platformIntegrations,
+                          doordashDrive: {
+                            ...platformIntegrations.doordashDrive,
+                            partnerSigningSecret: e.target.value,
+                          },
+                        })
+                      }
+                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400">
+                      Dispatch Mode
+                    </label>
+                    <select
+                      value={platformIntegrations.doordashDrive.mode}
+                      onChange={(e) =>
+                        setPlatformIntegrations({
+                          ...platformIntegrations,
+                          doordashDrive: {
+                            ...platformIntegrations.doordashDrive,
+                            mode: e.target.value as "simulated" | "live",
+                          },
+                        })
+                      }
+                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-emerald-300"
+                    >
+                      <option value="simulated">
+                        Auto-Detect Sandbox / Simulated Fallback
+                      </option>
+                      <option value="live">
+                        Live DoorDash Drive API v2 (openapi.doordash.com)
+                      </option>
+                    </select>
+                  </div>
                   <div className="sm:col-span-2">
                     <label className="block text-[11px] text-slate-400">
                       Platform Webhook Receiver URL

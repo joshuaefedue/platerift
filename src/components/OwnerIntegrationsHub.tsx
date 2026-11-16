@@ -668,23 +668,44 @@ export function OwnerIntegrationsHub({
                 /trip
               </strong>
             </span>
-            <button
-              type="button"
-              disabled={busyAction === "dispatch_doordash"}
-              onClick={() =>
-                runIntegrationAction(
-                  "dispatch_doordash",
-                  {},
-                  "🚗 DoorDash Driver dispatched! Live tracking link created."
-                )
-              }
-              className="inline-flex items-center gap-2 rounded-xl bg-rose-500/20 border border-rose-500/40 px-4 py-2 text-xs font-bold text-rose-200 hover:bg-rose-500/30 disabled:opacity-50"
-            >
-              <Truck className="h-4 w-4" />
-              {busyAction === "dispatch_doordash"
-                ? "Calling Driver..."
-                : "🚗 Test Call a DoorDash Driver Now"}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={busyAction === "verify_doordash_credentials"}
+                onClick={async () => {
+                  await onSaveIntegrations(config);
+                  await runIntegrationAction(
+                    "verify_doordash_credentials",
+                    {},
+                    "🔐 DoorDash Drive DD-JWT-V1 credentials verified!"
+                  );
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/40 hover:text-emerald-300 disabled:opacity-50"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                {busyAction === "verify_doordash_credentials"
+                  ? "Verifying..."
+                  : "Verify JWT Credentials"}
+              </button>
+              <button
+                type="button"
+                disabled={busyAction === "dispatch_doordash"}
+                onClick={async () => {
+                  await onSaveIntegrations(config);
+                  await runIntegrationAction(
+                    "dispatch_doordash",
+                    {},
+                    "🚗 DoorDash Drive API called! Live tracking link created."
+                  );
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-rose-500/20 border border-rose-500/40 px-4 py-2 text-xs font-bold text-rose-200 hover:bg-rose-500/30 disabled:opacity-50"
+              >
+                <Truck className="h-4 w-4" />
+                {busyAction === "dispatch_doordash"
+                  ? "Calling Driver..."
+                  : "🚗 Test Call a DoorDash Driver Now"}
+              </button>
+            </div>
           </div>
         </div>
 
