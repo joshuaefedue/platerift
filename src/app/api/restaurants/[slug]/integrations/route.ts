@@ -21,6 +21,15 @@ import {
   generateDoorDashDriveJwt,
   resolveDoorDashCredentials,
 } from "@/lib/doordashDriveClient";
+import {
+  buildCloverOAuthAuthorizeUrl,
+  buildSquareOAuthAuthorizeUrl,
+  createCloverChargeAndAtomicOrder,
+  createSquareOrderAndPayment,
+  fetchCloverPakmsPublicKey,
+  searchSquareCatalogObjects,
+  syncCloverInventoryAndModifiers,
+} from "@/lib/squareCloverPosClient";
 import { IntegrationActivityLog, OrderDeliveryTracking } from "@/lib/types";
 
 export async function POST(
@@ -323,16 +332,32 @@ export async function POST(
       });
     }
 
-    // 4. Square POS 2-Way Menu + Inventory Sync
+    // 4. Square POS OAuth 2.0 URL Generator + 2-Way Catalog (`SearchCatalogObjects`) & Inventory Sync
+    if (action === "get_square_oauth_url") {
+      const origin = req.nextUrl.origin || "https://platerift.com";
+      const oauthUrl = buildSquareOAuthAuthorizeUrl({
+        restaurantSlug: restaurant.slug,
+        tenantCfg: currentConfig.square,
+        platformCfg: platformIntegrations.square,
+        origin,
+      });
+      return NextResponse.json({ ok: true, oauthUrl });
+    }
+
     if (action === "sync_square") {
       const menuItems = listMenuItems(restaurant.id);
       const soldOutItems = menuItems.filter((m) => !m.available).length;
-      const totalVariantsAndSides = menuItems.reduce(
-        (sum, item) => sum + (item.modifiers?.length || 0),
-        0
-      );
+      const catalogSync = await searchSquareCatalogObjects({
+        tenantCfg: currentConfig.square,
+        platformCfg: platformIntegrations.square,
+        beginTime: body.deltaOnly
+          ? currentConfig.square.lastCatalogCursorTimestamp
+          : null,
+        menuItemsFallback: menuItems,
+      });
 
       currentConfig.square.lastSyncedAt = now;
+      currentConfig.square.lastCatalogCursorTimestamp = catalogSync.latestTime;
 
       const nextPaymentConfig = {
         ...restaurant.paymentConfig,
@@ -349,9 +374,11 @@ export async function POST(
       prependLog({
         id: `intlog_${Date.now()}`,
         integration: "square",
-        action: "Catalog & Stock Sync",
+        action: catalogSync.usedLiveApi
+          ? "Square Catalog API v2 Sync"
+          : "Catalog & Stock Sync",
         status: "success",
-        summary: `Square POS Sync Complete: ${menuItems.length} dishes, ${totalVariantsAndSides} size/side groups & ${soldOutItems} Sold-Out flags synced at Location ${currentConfig.square.locationId}.`,
+        summary: `${catalogSync.summary} • ${soldOutItems} Sold-Out flags synced.`,
         createdAt: now,
       });
 
@@ -359,28 +386,46 @@ export async function POST(
         integrationsConfig: currentConfig,
         paymentConfig: nextPaymentConfig,
       });
+      await commitToTurso();
 
       return NextResponse.json({
         ok: true,
+        catalogSync,
         integrationsConfig: updatedRestaurant?.integrationsConfig,
         restaurant: updatedRestaurant,
       });
     }
 
-    // 5. Push Specific Order to Square POS Register / Kitchen Display
+    // 5. Push Specific Order to Square POS (`POST /v2/orders` with PICKUP/DELIVERY fulfillment & UUID idempotency_key)
     if (action === "push_order_square") {
       const orderId = String(body.orderId || "");
       const orders = listOrders(restaurant.id);
       const targetOrder = orders.find((o) => o.id === orderId) || orders[0];
 
-      const squareOrderId = `sq_ord_${
-        targetOrder?.orderNumber || Math.floor(1000 + Math.random() * 9000)
-      }`;
+      const sqPush = await createSquareOrderAndPayment({
+        restaurant: { ...restaurant, integrationsConfig: currentConfig },
+        orderNumber:
+          targetOrder?.orderNumber ||
+          `SQ-${Math.floor(1000 + Math.random() * 9000)}`,
+        orderType: targetOrder?.orderType || "pickup",
+        customerName: targetOrder?.customerName || "Valued Guest",
+        customerPhone: targetOrder?.customerPhone || "+1 (312) 555-0199",
+        deliveryAddress: targetOrder?.deliveryAddress,
+        items: targetOrder?.items || [],
+        totalAmountDollars: targetOrder?.total || 28.5,
+        tipAmountDollars: targetOrder?.tip || 4.0,
+        sourceIdToken: body.sourceIdToken
+          ? String(body.sourceIdToken)
+          : undefined,
+        appFeePercent: restaurant.paymentConfig.serviceFeePercent,
+        platformCfg: platformIntegrations.square,
+      });
+
       if (targetOrder) {
         updateOrderIntegrationFields(targetOrder.id, {
           posSync: {
             ...targetOrder.posSync,
-            squareOrderId,
+            squareOrderId: sqPush.squareOrderId,
             squareSyncedAt: now,
             sourceChannel:
               targetOrder.posSync?.sourceChannel || "web_storefront",
@@ -391,37 +436,76 @@ export async function POST(
       prependLog({
         id: `intlog_${Date.now()}`,
         integration: "square",
-        action: "POS Order Push",
+        action: sqPush.usedLiveApi
+          ? "Square Orders API v2 Push"
+          : "POS Order Push",
         status: "success",
-        summary: `Pushed Order #${
-          targetOrder?.orderNumber || "DEMO"
-        } (${squareOrderId}) to Square POS & Kitchen Display at Location ${
-          currentConfig.square.locationId
-        }.`,
+        summary: sqPush.summary,
         createdAt: now,
       });
 
       const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
         integrationsConfig: currentConfig,
       });
+      await commitToTurso();
 
       return NextResponse.json({
         ok: true,
+        sqPush,
         integrationsConfig: updatedRestaurant?.integrationsConfig,
         orders: listOrders(restaurant.id),
       });
     }
 
-    // 6. Clover POS 2-Way Menu + Stock Sync
+    // 6. Clover POS OAuth 2.0 URL, PAKMS Public Key (`GET /pakms/apikey`) & v3 Inventory Sync
+    if (action === "get_clover_oauth_url") {
+      const origin = req.nextUrl.origin || "https://platerift.com";
+      const oauthUrl = buildCloverOAuthAuthorizeUrl({
+        restaurantSlug: restaurant.slug,
+        tenantCfg: currentConfig.clover,
+        platformCfg: platformIntegrations.clover,
+        origin,
+      });
+      return NextResponse.json({ ok: true, oauthUrl });
+    }
+
+    if (action === "fetch_clover_pakms_key") {
+      const pakms = await fetchCloverPakmsPublicKey({
+        tenantCfg: currentConfig.clover,
+        platformCfg: platformIntegrations.clover,
+      });
+      currentConfig.clover.publicKey = pakms.apiAccessKey;
+      prependLog({
+        id: `intlog_${Date.now()}`,
+        integration: "clover",
+        action: "PAKMS iFrame Key Generated",
+        status: "success",
+        summary: pakms.summary,
+        createdAt: now,
+      });
+      const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
+        integrationsConfig: currentConfig,
+      });
+      await commitToTurso();
+      return NextResponse.json({
+        ok: true,
+        pakms,
+        integrationsConfig: updatedRestaurant?.integrationsConfig,
+        restaurant: updatedRestaurant,
+      });
+    }
+
     if (action === "sync_clover") {
       const menuItems = listMenuItems(restaurant.id);
       const soldOutItems = menuItems.filter((m) => !m.available).length;
-      const totalModifiers = menuItems.reduce(
-        (sum, item) => sum + (item.modifiers?.length || 0),
-        0
-      );
+      const clvSync = await syncCloverInventoryAndModifiers({
+        tenantCfg: currentConfig.clover,
+        platformCfg: platformIntegrations.clover,
+        menuItemsFallback: menuItems,
+      });
 
       currentConfig.clover.lastSyncedAt = now;
+      currentConfig.clover.publicKey = clvSync.pakmsPublicKey;
 
       const nextPaymentConfig = {
         ...restaurant.paymentConfig,
@@ -438,9 +522,11 @@ export async function POST(
       prependLog({
         id: `intlog_${Date.now()}`,
         integration: "clover",
-        action: "Menu & Stock Sync",
+        action: clvSync.usedLiveApi
+          ? "Clover Inventory API v3 Sync"
+          : "Menu & Stock Sync",
         status: "success",
-        summary: `Clover POS Sync Complete: ${menuItems.length} dishes, ${totalModifiers} modifier groups & ${soldOutItems} Sold-Out flags synced (Merchant ${currentConfig.clover.merchantId}).`,
+        summary: `${clvSync.summary} • ${soldOutItems} Sold-Out flags synced.`,
         createdAt: now,
       });
 
@@ -448,28 +534,43 @@ export async function POST(
         integrationsConfig: currentConfig,
         paymentConfig: nextPaymentConfig,
       });
+      await commitToTurso();
 
       return NextResponse.json({
         ok: true,
+        clvSync,
         integrationsConfig: updatedRestaurant?.integrationsConfig,
         restaurant: updatedRestaurant,
       });
     }
 
-    // 7. Push Specific Order to Clover POS & Kitchen Printer
+    // 7. Push Specific Order to Clover POS via Atomic Orders (`POST /v3/merchants/{mId}/atomic_order/orders`)
     if (action === "push_order_clover") {
       const orderId = String(body.orderId || "");
       const orders = listOrders(restaurant.id);
       const targetOrder = orders.find((o) => o.id === orderId) || orders[0];
 
-      const cloverOrderId = `clv_ord_${
-        targetOrder?.orderNumber || Math.floor(1000 + Math.random() * 9000)
-      }`;
+      const clvPush = await createCloverChargeAndAtomicOrder({
+        restaurant: { ...restaurant, integrationsConfig: currentConfig },
+        orderNumber:
+          targetOrder?.orderNumber ||
+          `CLV-${Math.floor(1000 + Math.random() * 9000)}`,
+        items: targetOrder?.items || [],
+        totalAmountDollars: targetOrder?.total || 28.5,
+        taxAmountDollars: targetOrder?.tax || 2.25,
+        tipAmountDollars: targetOrder?.tip || 4.0,
+        cardToken: body.cardToken ? String(body.cardToken) : undefined,
+        customerIp:
+          req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          "127.0.0.1",
+        platformCfg: platformIntegrations.clover,
+      });
+
       if (targetOrder) {
         updateOrderIntegrationFields(targetOrder.id, {
           posSync: {
             ...targetOrder.posSync,
-            cloverOrderId,
+            cloverOrderId: clvPush.cloverOrderId,
             cloverSyncedAt: now,
             sourceChannel:
               targetOrder.posSync?.sourceChannel || "web_storefront",
@@ -480,19 +581,18 @@ export async function POST(
       prependLog({
         id: `intlog_${Date.now()}`,
         integration: "clover",
-        action: "Kitchen Printer KDS Push",
+        action: clvPush.usedLiveApi
+          ? "Clover Atomic Order Push"
+          : "Kitchen Printer KDS Push",
         status: "success",
-        summary: `Pushed Order #${
-          targetOrder?.orderNumber || "DEMO"
-        } (${cloverOrderId}) to Clover POS & Kitchen Printer (Merchant ${
-          currentConfig.clover.merchantId
-        }).`,
+        summary: clvPush.summary,
         createdAt: now,
       });
 
       const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
         integrationsConfig: currentConfig,
       });
+      await commitToTurso();
 
       return NextResponse.json({
         ok: true,

@@ -1141,6 +1141,12 @@ export default function CustomerOrderingStorefront() {
             paymentMethod,
             specialInstructions,
             scheduledFor: scheduledForVal,
+            paymentToken:
+              paymentMethod === "square"
+                ? "cnon:card-nonce-ok"
+                : paymentMethod === "clover"
+                ? `clv_tok_${restaurant.slug.replace(/[^a-z0-9]/g, "").slice(0, 8)}_live`
+                : undefined,
             simDay: simDay || undefined,
             simTime: simTime || undefined,
           }),
@@ -4910,27 +4916,53 @@ export default function CustomerOrderingStorefront() {
                   />
                 </div>
               ) : paymentMethod === "square" ? (
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-1 text-xs text-zinc-300">
-                  <p className="font-mono text-[11px] text-sky-300">
-                    ⬛ Square POS Checkout • Location:{" "}
-                    {restaurant.integrationsConfig?.square?.locationId ||
-                      "L_MAIN_KITCHEN"}
-                  </p>
-                  <p className="text-zinc-500">
-                    Synced with {restaurant.name}&apos;s Square Register &
-                    Kitchen Display.
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-2 text-xs text-zinc-300">
+                  <div className="flex items-center justify-between font-mono text-[11px] text-sky-300">
+                    <span>
+                      ⬛ Square Web Payments SDK • Location:{" "}
+                      {restaurant.integrationsConfig?.square?.locationId ||
+                        "L_MAIN_KITCHEN"}
+                    </span>
+                    <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] text-sky-300">
+                      source_id: cnon:card-nonce-ok
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    readOnly
+                    value="•••• •••• •••• 1111   |   EXP 09/28   |   CVV 111   |   ZIP 94103"
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-200"
+                  />
+                  <p className="text-[11px] text-zinc-500">
+                    Tokenizes card via Square Web Payments SDK →{" "}
+                    <code>POST /v2/orders</code> +{" "}
+                    <code>POST /v2/payments</code> (direct settlement to{" "}
+                    {restaurant.name}).
                   </p>
                 </div>
               ) : paymentMethod === "clover" ? (
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-1 text-xs text-zinc-300">
-                  <p className="font-mono text-[11px] text-emerald-300">
-                    🍀 Clover eCommerce Checkout • Merchant:{" "}
-                    {restaurant.integrationsConfig?.clover?.merchantId ||
-                      "CLV_MERCHANT"}
-                  </p>
-                  <p className="text-zinc-500">
-                    Fires your order directly to {restaurant.name}&apos;s Clover
-                    Kitchen Printer.
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-2 text-xs text-zinc-300">
+                  <div className="flex items-center justify-between font-mono text-[11px] text-emerald-300">
+                    <span>
+                      🍀 Clover Hosted iFrame (PAKMS) • Merchant:{" "}
+                      {restaurant.integrationsConfig?.clover?.merchantId ||
+                        "CLV_MERCHANT"}
+                    </span>
+                    <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                      token: clv_tok_iframe
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    readOnly
+                    value="•••• •••• •••• 4242   |   EXP 11/28   |   CVV 242   |   ZIP 60661"
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-200"
+                  />
+                  <p className="text-[11px] text-zinc-500">
+                    Tokenizes card via Clover Hosted iFrame SDK (
+                    <code>GET /pakms/apikey</code>) →{" "}
+                    <code>POST /v1/charges</code> +{" "}
+                    <code>POST /v3/merchants/&#123;mId&#125;/atomic_order/orders</code>.
                   </p>
                 </div>
               ) : (

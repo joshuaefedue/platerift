@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   getPlatformIntegrationsConfig,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listMenuItems,
   listRestaurants,
   updateMenuItem,
   updateRestaurantTenant,
 } from "@/lib/db";
 import { buildDefaultIntegrationsConfig } from "@/lib/integrationsDefaults";
+import { searchSquareCatalogObjects } from "@/lib/squareCloverPosClient";
 
 export async function GET() {
   const platformConfig = getPlatformIntegrationsConfig();
   return NextResponse.json({
-    endpoint: "/api/webhooks/square",
+    endpoint: "https://platerift.com/api/webhooks/square",
     provider: "Square POS & Commerce API",
     status: platformConfig.square.setupCompleted
       ? "active"
@@ -29,12 +32,19 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const body = await req.json();
     const eventType = String(body.type || "inventory.count.updated");
     const locationId = String(body.location_id || body.merchant_id || "");
     const restaurantSlug = String(body.restaurant_slug || "");
+    const beginTime = String(
+      body.data?.object?.catalog_version?.updated_at ||
+        body.begin_time ||
+        ""
+    );
 
     const allRestaurants = listRestaurants();
+    const platformConfig = getPlatformIntegrationsConfig();
     const targetRestaurant =
       (restaurantSlug
         ? getRestaurantBySlugOrDomain(restaurantSlug)
@@ -42,7 +52,8 @@ export async function POST(req: NextRequest) {
       allRestaurants.find(
         (r) =>
           locationId &&
-          r.integrationsConfig?.square?.locationId === locationId
+          (r.integrationsConfig?.square?.locationId === locationId ||
+            r.integrationsConfig?.square?.merchantId === locationId)
       ) ||
       allRestaurants[0];
 
@@ -61,14 +72,19 @@ export async function POST(req: NextRequest) {
 
     let detailMessage = `Processed Square webhook event (${eventType}).`;
     let updatedItemName: string | null = null;
+    let nextCursorTime =
+      beginTime || intCfg.square.lastCatalogCursorTimestamp || now;
 
     if (eventType === "inventory.count.updated") {
+      const counts = Array.isArray(body.data?.object?.inventory_counts)
+        ? body.data.object.inventory_counts[0]
+        : body.data?.object || body;
       const itemName = String(
-        body.data?.object?.item_name || body.item_name || ""
+        counts?.item_name || body.data?.object?.item_name || body.item_name || ""
       );
       const quantity =
-        body.data?.object?.quantity !== undefined
-          ? Number(body.data.object.quantity)
+        counts?.quantity !== undefined
+          ? Number(counts.quantity)
           : body.quantity !== undefined
           ? Number(body.quantity)
           : 0;
@@ -95,7 +111,15 @@ export async function POST(req: NextRequest) {
             : `Square Register updated "${targetItem.name}" count to ${quantity} — marked Available on web storefront.`;
       }
     } else if (eventType === "catalog.version.updated") {
-      detailMessage = `Synced ${menuItems.length} catalog items & modifier groups from Square Catalog API.`;
+      const deltaSync = await searchSquareCatalogObjects({
+        tenantCfg: intCfg.square,
+        platformCfg: platformConfig.square,
+        beginTime:
+          beginTime || intCfg.square.lastCatalogCursorTimestamp || null,
+        menuItemsFallback: menuItems,
+      });
+      nextCursorTime = deltaSync.latestTime;
+      detailMessage = deltaSync.summary;
     }
 
     const nextLogs = [
@@ -115,17 +139,20 @@ export async function POST(req: NextRequest) {
         ...intCfg,
         square: {
           ...intCfg.square,
+          lastCatalogCursorTimestamp: nextCursorTime,
           lastSyncedAt: now,
         },
         activityLogs: nextLogs,
       },
     });
+    await commitToTurso();
 
     return NextResponse.json({
       received: true,
       eventType,
       restaurant: targetRestaurant.slug,
       updatedItem: updatedItemName,
+      beginTimeUsed: beginTime || null,
       detail: detailMessage,
     });
   } catch (error) {

@@ -1008,21 +1008,58 @@ export function OwnerIntegrationsHub({
 
           {/* 1-Click Action Footer */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-4">
-            <button
-              type="button"
-              disabled={busyAction === "push_order_square"}
-              onClick={() =>
-                runIntegrationAction(
-                  "push_order_square",
-                  {},
-                  "⬛ Sent test order ticket to Square POS & Kitchen Display!"
-                )
-              }
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-sky-500/40"
-            >
-              <Zap className="h-3.5 w-3.5 text-sky-400" />
-              Send Test Order to Square
-            </button>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                disabled={busyAction === "get_square_oauth_url"}
+                onClick={async () => {
+                  setBusyAction("get_square_oauth_url");
+                  try {
+                    const res = await fetch(
+                      `/api/restaurants/${encodeURIComponent(
+                        restaurant.slug
+                      )}/integrations`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          action: "get_square_oauth_url",
+                        }),
+                      }
+                    );
+                    const data = await res.json();
+                    if (data.oauthUrl) {
+                      window.open(data.oauthUrl, "_blank", "noopener,noreferrer");
+                      onNotify(
+                        "🔗 Opened Square OAuth 2.0 Code Flow authorization window!"
+                      );
+                    }
+                  } finally {
+                    setBusyAction(null);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-300 hover:bg-sky-500/20"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Connect Square OAuth 2.0
+              </button>
+
+              <button
+                type="button"
+                disabled={busyAction === "push_order_square"}
+                onClick={() =>
+                  runIntegrationAction(
+                    "push_order_square",
+                    {},
+                    "⬛ Sent test order ticket to Square POS & Kitchen Display!"
+                  )
+                }
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-sky-500/40"
+              >
+                <Zap className="h-3.5 w-3.5 text-sky-400" />
+                Send Test Order to Square
+              </button>
+            </div>
 
             <button
               type="button"
@@ -1031,7 +1068,7 @@ export function OwnerIntegrationsHub({
                 runIntegrationAction(
                   "sync_square",
                   {},
-                  `⬛ Synced ${menuItems.length} dishes, sizes, sides & Sold-Out counts with Square POS!`
+                  `⬛ Synced ${menuItems.length} dishes, sizes, sides & Sold-Out counts with Square Catalog API!`
                 )
               }
               className="inline-flex items-center gap-2 rounded-xl bg-sky-500/20 border border-sky-500/40 px-4 py-2 text-xs font-bold text-sky-200 hover:bg-sky-500/30 disabled:opacity-50"
@@ -1043,7 +1080,7 @@ export function OwnerIntegrationsHub({
               />
               {busyAction === "sync_square"
                 ? "Syncing Square..."
-                : "⬛ Sync Menu & Stock with Square Now"}
+                : "⬛ Sync Catalog & Stock Now"}
             </button>
           </div>
         </div>
@@ -1347,21 +1384,73 @@ export function OwnerIntegrationsHub({
 
           {/* 1-Click Action Footer */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-4">
-            <button
-              type="button"
-              disabled={busyAction === "push_order_clover"}
-              onClick={() =>
-                runIntegrationAction(
-                  "push_order_clover",
-                  {},
-                  "🍀 Fired test order ticket to Clover POS & Kitchen Printer!"
-                )
-              }
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/40"
-            >
-              <Zap className="h-3.5 w-3.5 text-emerald-400" />
-              Print Test Ticket on Clover
-            </button>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                disabled={busyAction === "get_clover_oauth_url"}
+                onClick={async () => {
+                  setBusyAction("get_clover_oauth_url");
+                  try {
+                    const res = await fetch(
+                      `/api/restaurants/${encodeURIComponent(
+                        restaurant.slug
+                      )}/integrations`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          action: "get_clover_oauth_url",
+                        }),
+                      }
+                    );
+                    const data = await res.json();
+                    if (data.oauthUrl) {
+                      window.open(data.oauthUrl, "_blank", "noopener,noreferrer");
+                      onNotify(
+                        "🔗 Opened Clover OAuth 2.0 App Market authorization window!"
+                      );
+                    }
+                  } finally {
+                    setBusyAction(null);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Connect Clover OAuth 2.0
+              </button>
+
+              <button
+                type="button"
+                disabled={busyAction === "fetch_clover_pakms_key"}
+                onClick={() =>
+                  runIntegrationAction(
+                    "fetch_clover_pakms_key",
+                    {},
+                    "🔑 Retrieved Clover PAKMS apiAccessKey for Hosted iFrame checkout!"
+                  )
+                }
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/40"
+              >
+                🔑 Fetch PAKMS Key
+              </button>
+
+              <button
+                type="button"
+                disabled={busyAction === "push_order_clover"}
+                onClick={() =>
+                  runIntegrationAction(
+                    "push_order_clover",
+                    {},
+                    "🍀 Fired Atomic Order ticket to Clover POS & Kitchen Printer!"
+                  )
+                }
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/40"
+              >
+                <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                Fire Atomic Order
+              </button>
+            </div>
 
             <button
               type="button"
@@ -1370,7 +1459,7 @@ export function OwnerIntegrationsHub({
                 runIntegrationAction(
                   "sync_clover",
                   {},
-                  `🍀 Synced ${menuItems.length} dishes, modifiers & Sold-Out counts with Clover POS!`
+                  `🍀 Synced ${menuItems.length} dishes, modifiers & Sold-Out counts with Clover v3 Inventory API!`
                 )
               }
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 px-4 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-500/30 disabled:opacity-50"
@@ -1382,7 +1471,7 @@ export function OwnerIntegrationsHub({
               />
               {busyAction === "sync_clover"
                 ? "Syncing Clover..."
-                : "🍀 Sync Menu & Stock with Clover Now"}
+                : "🍀 Sync v3 Inventory Now"}
             </button>
           </div>
         </div>

@@ -526,11 +526,15 @@ export interface SquareIntegrationConfig {
   environment: "sandbox" | "production";
   applicationId: string;
   accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string | null;
+  merchantId?: string;
   locationId: string;
   webhookSignatureKey: string;
   acceptSquareCheckout: boolean;
   autoPushOrdersToPos: boolean;
   autoSyncCatalogAndStock: boolean;
+  lastCatalogCursorTimestamp?: string | null;
   lastSyncedAt: string | null;
 }
 
@@ -539,8 +543,8 @@ export interface CloverIntegrationConfig {
   mode: "simulated" | "live";
   environment: "sandbox" | "production";
   merchantId: string;
-  publicKey: string;
-  privateToken: string;
+  publicKey: string; // PAKMS apiAccessKey from GET /pakms/apikey
+  privateToken: string; // OAuth access_token
   webhookSecret: string;
   acceptCloverCheckout: boolean;
   autoPushOrdersToKitchenKds: boolean;

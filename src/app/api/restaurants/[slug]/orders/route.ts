@@ -15,6 +15,10 @@ import {
   createDoorDashDriveDelivery,
   resolveDoorDashCredentials,
 } from "@/lib/doordashDriveClient";
+import {
+  createCloverChargeAndAtomicOrder,
+  createSquareOrderAndPayment,
+} from "@/lib/squareCloverPosClient";
 
 export async function POST(
   req: NextRequest,
@@ -218,7 +222,7 @@ export async function POST(
 
     const randToken = Math.random().toString(36).slice(2, 9).toUpperCase();
     const slugShort = restaurant.slug.replace(/-/g, "").slice(0, 8);
-    const paymentReference =
+    let paymentReference =
       method === "stripe"
         ? `pi_3Q9_${slugShort}_${randToken}`
         : method === "paypal"
@@ -261,6 +265,80 @@ export async function POST(
       }
     }
 
+    // Execute Square Orders API + Payments API or Clover Ecommerce Charge + Atomic Order when selected or auto-push enabled
+    const preSyncedPos: {
+      squareOrderId?: string;
+      squareSyncedAt?: string;
+      cloverOrderId?: string;
+      cloverSyncedAt?: string;
+    } = {};
+
+    const nowIso = new Date().toISOString();
+    const shouldFireSquare =
+      method === "square" ||
+      (platformIntegrations.square.setupCompleted &&
+        platformIntegrations.square.availableToOwners &&
+        restaurant.features.squarePos !== false &&
+        intCfg.square.enabled &&
+        intCfg.square.autoPushOrdersToPos);
+
+    if (shouldFireSquare) {
+      const sqRes = await createSquareOrderAndPayment({
+        restaurant,
+        orderNumber: randToken,
+        orderType: requestedOrderType,
+        customerName: body.customerName,
+        customerPhone: body.customerPhone,
+        deliveryAddress: body.deliveryAddress,
+        items: body.items || [],
+        totalAmountDollars: Number(body.total || 0),
+        tipAmountDollars: Number(body.tip || 0),
+        sourceIdToken:
+          method === "square"
+            ? String(body.paymentToken || "cnon:card-nonce-ok")
+            : undefined,
+        appFeePercent: restaurant.paymentConfig.serviceFeePercent,
+        platformCfg: platformIntegrations.square,
+      });
+      preSyncedPos.squareOrderId = sqRes.squareOrderId;
+      preSyncedPos.squareSyncedAt = nowIso;
+      if (method === "square" && sqRes.squarePaymentId) {
+        paymentReference = sqRes.squarePaymentId;
+      }
+    }
+
+    const shouldFireClover =
+      method === "clover" ||
+      (platformIntegrations.clover.setupCompleted &&
+        platformIntegrations.clover.availableToOwners &&
+        restaurant.features.cloverPos !== false &&
+        intCfg.clover.enabled &&
+        intCfg.clover.autoPushOrdersToKitchenKds);
+
+    if (shouldFireClover) {
+      const clvRes = await createCloverChargeAndAtomicOrder({
+        restaurant,
+        orderNumber: randToken,
+        items: body.items || [],
+        totalAmountDollars: Number(body.total || 0),
+        taxAmountDollars: Number(body.tax || 0),
+        tipAmountDollars: Number(body.tip || 0),
+        cardToken:
+          method === "clover"
+            ? String(body.paymentToken || `clv_tok_${randToken.toLowerCase()}`)
+            : undefined,
+        customerIp:
+          req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          "127.0.0.1",
+        platformCfg: platformIntegrations.clover,
+      });
+      preSyncedPos.cloverOrderId = clvRes.cloverOrderId;
+      preSyncedPos.cloverSyncedAt = nowIso;
+      if (method === "clover" && clvRes.cloverChargeId) {
+        paymentReference = clvRes.cloverChargeId;
+      }
+    }
+
     const result = createOrder({
       restaurantId: restaurant.id,
       customerName: body.customerName,
@@ -283,6 +361,7 @@ export async function POST(
       specialInstructions: body.specialInstructions || "",
       scheduledFor: body.scheduledFor,
       deliveryTracking: preDispatchedDeliveryTracking,
+      posSync: preSyncedPos,
     });
 
     await commitToTurso();
