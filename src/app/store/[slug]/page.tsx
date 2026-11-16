@@ -1356,7 +1356,9 @@ export default function CustomerOrderingStorefront() {
 
                 <div className="pt-1 flex items-center gap-1.5 border-t border-zinc-800/80">
                   <Link
-                    href={`/dashboard/${restaurant.slug}`}
+                    href={`/dashboard/${encodeURIComponent(
+                      restaurant.customDomain
+                    )}`}
                     className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-zinc-900 border border-zinc-700 px-2 py-1.5 text-[11px] font-semibold text-white hover:border-zinc-500 transition"
                   >
                     <LayoutDashboard className="h-3 w-3" /> Owner Portal

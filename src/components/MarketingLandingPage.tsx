@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -112,6 +112,7 @@ const DEMO_RESTAURANTS = [
     cuisine: "Artisanal Wood-Fired Pizza & Pasta",
     emoji: "🍕",
     domain: "orders.bellanapoli.com",
+    subdomain: "bella-napoli.platerift.com",
     highlight: "Editorial Warmth theme • DoorDash Drive + Square POS",
   },
   {
@@ -120,6 +121,7 @@ const DEMO_RESTAURANTS = [
     cuisine: "Authentic Tokyo Ramen & Omakase Sushi",
     emoji: "🍣",
     domain: "eat.sakurasushi.io",
+    subdomain: "sakura-sushi.platerift.com",
     highlight: "Midnight Luxe theme • Clover KDS + Vapi Voice AI",
   },
   {
@@ -127,7 +129,8 @@ const DEMO_RESTAURANTS = [
     slug: "fuego-taqueria",
     cuisine: "Birria Tacos, Quesabirria & Craft Aguas Frescas",
     emoji: "🌮",
-    domain: "eat.fuegotaqueria.mx",
+    domain: "tacos.fuegotaqueria.com",
+    subdomain: "fuego-taqueria.platerift.com",
     highlight: "Vibrant Streetfood theme • Food Truck Commissary Stock",
   },
 ];
@@ -151,6 +154,53 @@ const WORKFLOW_STEPS = [
 ];
 
 export default function MarketingLandingPage() {
+  const [liveDemos, setLiveDemos] = useState(DEMO_RESTAURANTS);
+
+  useEffect(() => {
+    fetch("/api/restaurants", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data?.restaurants) && data.restaurants.length > 0) {
+          setLiveDemos(
+            data.restaurants.map(
+              (r: {
+                name: string;
+                slug: string;
+                cuisine: string;
+                logoEmoji?: string;
+                customDomain?: string;
+                subdomain?: string;
+                tagline?: string;
+              }) => {
+                const preset = DEMO_RESTAURANTS.find((d) => d.slug === r.slug);
+                return {
+                  name: r.name,
+                  slug: r.slug,
+                  cuisine: r.cuisine,
+                  emoji: r.logoEmoji || preset?.emoji || "🍽️",
+                  domain:
+                    r.customDomain ||
+                    preset?.domain ||
+                    `${r.slug}.platerift.com`,
+                  subdomain: r.subdomain || `${r.slug}.platerift.com`,
+                  highlight:
+                    preset?.highlight ||
+                    r.tagline ||
+                    "Custom Domain Storefront • Direct Online Ordering",
+                };
+              }
+            )
+          );
+        }
+      })
+      .catch(() => {
+        // Keep default demo cards
+      });
+  }, []);
+
+  const primaryDemoDomain =
+    liveDemos[0]?.domain || "orders.bellanapoli.com";
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-orange-500 selection:text-white">
       {/* Top Navigation Bar */}
@@ -187,7 +237,7 @@ export default function MarketingLandingPage() {
 
           <div className="flex items-center gap-2.5">
             <Link
-              href="/dashboard/bella-napoli"
+              href={`/dashboard/${encodeURIComponent(primaryDemoDomain)}`}
               className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-orange-500/40 hover:text-white transition"
             >
               <LayoutDashboard className="h-3.5 w-3.5 text-orange-400" />
@@ -231,14 +281,14 @@ export default function MarketingLandingPage() {
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
             <Link
-              href="/dashboard/bella-napoli"
+              href={`/dashboard/${encodeURIComponent(primaryDemoDomain)}`}
               className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-orange-500/25 hover:from-orange-600 hover:to-rose-700 transition"
             >
               <LayoutDashboard className="h-4 w-4" />
               Explore Live Owner Dashboard
             </Link>
             <Link
-              href="/store/bella-napoli"
+              href={`/store/${encodeURIComponent(primaryDemoDomain)}`}
               className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/90 px-6 py-3.5 text-sm font-bold text-slate-100 hover:border-slate-500 hover:bg-slate-800 transition"
             >
               <Store className="h-4 w-4 text-emerald-400" />
@@ -429,7 +479,7 @@ export default function MarketingLandingPage() {
 
               <div className="pt-2">
                 <Link
-                  href="/dashboard/bella-napoli"
+                  href={`/dashboard/${encodeURIComponent(primaryDemoDomain)}`}
                   className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-xs font-bold text-white hover:bg-orange-600 transition"
                 >
                   Test the Owner AI Agent Live
@@ -576,7 +626,7 @@ export default function MarketingLandingPage() {
           </div>
 
           <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-            {DEMO_RESTAURANTS.map((demo) => (
+            {liveDemos.map((demo) => (
               <div
                 key={demo.slug}
                 className="flex flex-col justify-between rounded-3xl border border-slate-800 bg-slate-950 p-6 shadow-xl"
@@ -584,14 +634,22 @@ export default function MarketingLandingPage() {
                 <div>
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-3xl">{demo.emoji}</span>
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-300">
+                    <Link
+                      href={`/?domain=${encodeURIComponent(demo.domain)}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/20 transition"
+                      title={`Launch custom domain storefront: ${demo.domain}`}
+                    >
+                      <Globe className="h-3 w-3" />
                       {demo.domain}
-                    </span>
+                    </Link>
                   </div>
                   <h3 className="mt-4 text-lg font-bold text-white">
                     {demo.name}
                   </h3>
                   <p className="mt-1 text-xs text-slate-400">{demo.cuisine}</p>
+                  <p className="mt-1 font-mono text-[11px] text-sky-400">
+                    Platerift Host: {demo.subdomain}
+                  </p>
                   <p className="mt-3 rounded-xl border border-slate-800/90 bg-slate-900/70 px-3 py-2 text-[11px] text-slate-300">
                     {demo.highlight}
                   </p>
@@ -599,14 +657,14 @@ export default function MarketingLandingPage() {
 
                 <div className="mt-6 grid grid-cols-2 gap-2.5">
                   <Link
-                    href={`/dashboard/${demo.slug}`}
+                    href={`/dashboard/${encodeURIComponent(demo.domain)}`}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-2.5 text-xs font-bold text-white hover:from-orange-600 hover:to-rose-700 transition"
                   >
                     <LayoutDashboard className="h-3.5 w-3.5" />
                     Owner Portal
                   </Link>
                   <Link
-                    href={`/store/${demo.slug}`}
+                    href={`/store/${encodeURIComponent(demo.domain)}`}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-xs font-bold text-slate-200 hover:border-emerald-500/50 hover:text-white transition"
                   >
                     <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
@@ -630,10 +688,16 @@ export default function MarketingLandingPage() {
             <span>— All-in-One Direct Ordering &amp; AI Operations Platform</span>
           </div>
           <div className="flex items-center gap-5 text-slate-400">
-            <Link href="/dashboard/bella-napoli" className="hover:text-white">
+            <Link
+              href={`/dashboard/${encodeURIComponent(primaryDemoDomain)}`}
+              className="hover:text-white"
+            >
               Owner Portal Demo
             </Link>
-            <Link href="/store/bella-napoli" className="hover:text-white">
+            <Link
+              href={`/store/${encodeURIComponent(primaryDemoDomain)}`}
+              className="hover:text-white"
+            >
               Storefront Demo
             </Link>
             <Link href="/admin" className="hover:text-white">

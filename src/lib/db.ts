@@ -437,6 +437,10 @@ function initTables(db: DatabaseSync) {
       UPDATE platform_settings
       SET valueJson = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(valueJson, 'https://api.platerift.app', 'https://platerift.com'), 'platerift.app', 'platerift.com'), 'RestoSaaS', 'Platerift'), 'restosaas', 'platerift'), 'RESTOSAAS', 'PLATERIFT')
       WHERE valueJson LIKE '%platerift.app%' OR valueJson LIKE '%restosaas%' OR valueJson LIKE '%RestoSaaS%' OR valueJson LIKE '%RESTOSAAS%';
+
+      UPDATE restaurants
+      SET domainVerified = 1, sslStatus = 'active'
+      WHERE id IN ('rest_bella_napoli', 'rest_sakura_omakase', 'rest_fuego_taqueria') AND domainVerified = 0;
     `);
   } catch {
     // Ignore if tables are being initialized
@@ -816,8 +820,8 @@ function seedIfEmpty(db: DatabaseSync) {
       status: "active",
       customDomain: "tacos.fuegotaqueria.com",
       subdomain: "fuego-taqueria.platerift.com",
-      domainVerified: false,
-      sslStatus: "pending",
+      domainVerified: true,
+      sslStatus: "active",
       dnsTxtToken: "platerift-verify=fg5519tx883b",
       logoEmoji: "🌮",
       primaryColor: "#d97706",
@@ -2126,12 +2130,30 @@ export function getRestaurantBySlugOrDomain(
   identifier: string
 ): RestaurantTenant | null {
   const db = getDb();
-  const clean = identifier.trim().toLowerCase();
+  const clean = identifier
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "");
+
+  const aliasSlug =
+    clean === "eat.fuegotaqueria.mx" || clean === "tacos.fuegotaqueria.com"
+      ? "fuego-taqueria"
+      : clean === "orders.bellanapoli.com"
+      ? "bella-napoli"
+      : clean === "eat.sakurasushi.io"
+      ? "sakura-sushi"
+      : clean.endsWith(".platerift.com")
+      ? clean.replace(/\.platerift\.com$/, "")
+      : clean;
+
   const row = db
     .prepare(
-      "SELECT * FROM restaurants WHERE LOWER(slug) = ? OR LOWER(customDomain) = ? OR LOWER(subdomain) = ? OR id = ? LIMIT 1"
+      "SELECT * FROM restaurants WHERE LOWER(slug) = ? OR LOWER(slug) = ? OR LOWER(customDomain) = ? OR LOWER(subdomain) = ? OR id = ? LIMIT 1"
     )
-    .get(clean, clean, clean, identifier) as Record<string, unknown> | undefined;
+    .get(clean, aliasSlug, clean, clean, identifier) as
+    | Record<string, unknown>
+    | undefined;
   return row ? mapRestaurantRow(row) : null;
 }
 

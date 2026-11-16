@@ -15,6 +15,7 @@ export async function GET() {
   try {
     await hydrateFromTursoIfNeeded();
     await syncPlatformSettingFromTurso("twilio_gateway");
+    await syncPlatformSettingFromTurso("twilio_gateway");
     const config = getPlatformTwilioConfig();
     const recentSmsLogs = listAllPlatformSmsLogs(50);
     return NextResponse.json({

@@ -1268,7 +1268,7 @@ export default function RestaurantOwnerPortal() {
         {/* Sidebar Footer: Storefront & Custom Domain Shortcuts */}
         <div className="border-t border-slate-800/90 bg-slate-950/60 p-4 space-y-2.5">
           <Link
-            href={`/store/${restaurant.slug}`}
+            href={`/store/${encodeURIComponent(restaurant.customDomain)}`}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3.5 py-2.5 text-xs font-semibold text-white shadow-lg hover:from-orange-600 hover:to-rose-700 transition"
           >
             <Store className="h-4 w-4" />

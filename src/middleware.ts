@@ -23,21 +23,29 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Support custom domain simulation on localhost via ?domain=orders.bellanapoli.com
+  // Support custom domain simulation via ?domain=orders.bellanapoli.com
   const simulatedDomain = url.searchParams.get("domain");
   if (simulatedDomain && url.pathname === "/") {
     url.pathname = `/store/${encodeURIComponent(simulatedDomain)}`;
     return NextResponse.rewrite(url);
   }
 
+  // Route tenant subdomains on platerift.com (e.g. bella-napoli.platerift.com) to their storefront
+  const isTenantPlateriftSubdomain =
+    hostname.endsWith(".platerift.com") &&
+    !PLATFORM_HOSTS.has(hostname) &&
+    !hostname.startsWith("api.") &&
+    !hostname.startsWith("admin.");
+
   // Always serve the Marketing Landing Page at "/" on primary platform / local / Vercel hosts
   const isPlatformOrDefaultHost =
-    PLATFORM_HOSTS.has(hostname) ||
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname.endsWith(".localhost") ||
-    hostname.endsWith(".vercel.app") ||
-    hostname.includes("platerift");
+    !isTenantPlateriftSubdomain &&
+    (PLATFORM_HOSTS.has(hostname) ||
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.endsWith(".localhost") ||
+      hostname.endsWith(".vercel.app") ||
+      hostname.includes("platerift"));
 
   if (!isPlatformOrDefaultHost) {
     // Only rewrite to /store/<hostname> if a restaurant explicitly mapped a verified custom domain

@@ -15,6 +15,7 @@ export async function GET() {
   try {
     await hydrateFromTursoIfNeeded();
     await syncPlatformSettingFromTurso("platform_integrations");
+    await syncPlatformSettingFromTurso("platform_integrations");
     const config = getPlatformIntegrationsConfig();
     const restaurants = listRestaurants();
     return NextResponse.json({
