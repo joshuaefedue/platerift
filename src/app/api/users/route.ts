@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   createUserAccount,
   deleteUserAccount,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listUsers,
   updateUserAccount,
 } from "@/lib/db";
@@ -10,6 +12,7 @@ import type { UserRole, UserScope, UserStatus } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const scope = req.nextUrl.searchParams.get("scope") as UserScope | null;
     const restaurantSlugOrId = req.nextUrl.searchParams.get("restaurantId");
 
@@ -39,6 +42,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const body = await req.json();
     if (!body.name || !body.email || !body.role) {
       return NextResponse.json(
@@ -66,6 +70,7 @@ export async function POST(req: NextRequest) {
       permissions: body.permissions,
     });
 
+    await commitToTurso();
     return NextResponse.json({ user: created }, { status: 201 });
   } catch (error) {
     console.error("POST /api/users error:", error);
@@ -78,6 +83,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const body = await req.json();
     const { userId, ...updates } = body;
     if (!userId) {
@@ -92,6 +98,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    await commitToTurso();
     return NextResponse.json({ user: updated });
   } catch (error) {
     console.error("PATCH /api/users error:", error);
@@ -104,6 +111,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const userId = req.nextUrl.searchParams.get("userId");
     if (!userId) {
       return NextResponse.json(
@@ -113,6 +121,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const deleted = deleteUserAccount(userId);
+    await commitToTurso();
     return NextResponse.json({ deleted });
   } catch (error) {
     console.error("DELETE /api/users error:", error);

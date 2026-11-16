@@ -33,6 +33,8 @@ import {
   buildSimulatedDoorDashTracking,
 } from "./integrationsDefaults";
 import {
+  ensureTursoHydrated,
+  flushTursoMirror,
   getTursoCloudStatus,
   pullTursoToLocalSqlite,
   pushLocalSqliteToTurso,
@@ -76,20 +78,30 @@ export function getDb(): DatabaseSync {
     seedUsersIfEmpty(db);
     seedCustomerHistoryAndReordersIfEmpty(db);
     global.__plateriftDb = db;
-
-    // Automatically hydrate from Turso on cold start (or push initial seed if Turso is empty)
-    if (!global.__plateriftTursoHydrated) {
-      global.__plateriftTursoHydrated = true;
-      pullTursoToLocalSqlite(db).catch(() => {
-        // Non-blocking cold-start hydration
-      });
-    }
   } else {
     initTables(global.__plateriftDb);
     seedUsersIfEmpty(global.__plateriftDb);
     seedCustomerHistoryAndReordersIfEmpty(global.__plateriftDb);
   }
   return global.__plateriftDb;
+}
+
+/**
+ * Awaits Turso cloud hydration before a request reads/writes so cold-start
+ * serverless functions never overwrite saved cloud records.
+ */
+export async function hydrateFromTursoIfNeeded(): Promise<void> {
+  const db = getDb();
+  await ensureTursoHydrated(db);
+}
+
+/**
+ * Awaits pushing the latest SQLite state to Turso before an API response returns,
+ * ensuring Vercel serverless functions never freeze before saving to Turso.
+ */
+export async function commitToTurso(): Promise<TursoSyncSummary | null> {
+  const db = getDb();
+  return flushTursoMirror(db);
 }
 
 export async function syncWithTursoNow(

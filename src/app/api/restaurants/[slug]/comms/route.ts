@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   createEmailCampaign,
   createSmsLog,
   getPlatformTwilioConfig,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listCustomers,
 } from "@/lib/db";
 
@@ -12,6 +14,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
     if (!restaurant) {
@@ -44,6 +47,7 @@ export async function POST(
             provider,
           })
         );
+        await commitToTurso();
         return NextResponse.json({ sentCount: logs.length, logs });
       }
 
@@ -56,6 +60,7 @@ export async function POST(
         provider,
       });
 
+      await commitToTurso();
       return NextResponse.json({ smsLog });
     }
 
@@ -72,6 +77,7 @@ export async function POST(
         bodyHtml: body.bodyHtml || "<p>Special offer from our kitchen!</p>",
       });
 
+      await commitToTurso();
       return NextResponse.json({ campaign }, { status: 201 });
     }
 

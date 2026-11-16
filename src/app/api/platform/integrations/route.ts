@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   getPlatformIntegrationsConfig,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listRestaurants,
   updatePlatformIntegrationsConfig,
   updateRestaurantTenant,
@@ -9,6 +11,7 @@ import {
 
 export async function GET() {
   try {
+    await hydrateFromTursoIfNeeded();
     const config = getPlatformIntegrationsConfig();
     const restaurants = listRestaurants();
     return NextResponse.json({
@@ -26,6 +29,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const body = await req.json();
 
     // 1. One-Click "Finish Setup & Release All 4 Integrations to Restaurant Owners"
@@ -68,6 +72,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      await commitToTurso();
       return NextResponse.json({
         ok: true,
         config: updatedConfig,
@@ -99,6 +104,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      await commitToTurso();
       return NextResponse.json({
         ok: true,
         restaurant: updatedTenant,
@@ -107,6 +113,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Save updated PlatformIntegrationsConfig from Super Admin Console
     const updated = updatePlatformIntegrationsConfig(body.config || body);
+    await commitToTurso();
     return NextResponse.json({
       ok: true,
       config: updated,

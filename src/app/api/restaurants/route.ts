@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   createRestaurantTenant,
+  hydrateFromTursoIfNeeded,
   listCustomers,
   listMenuItems,
   listOrders,
@@ -10,6 +12,7 @@ import { evaluateRestaurantAvailability } from "@/lib/availability";
 
 export async function GET() {
   try {
+    await hydrateFromTursoIfNeeded();
     const restaurants = listRestaurants();
     const enriched = restaurants.map((r) => {
       const orders = listOrders(r.id);
@@ -48,6 +51,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const body = await req.json();
     if (!body.name || !body.ownerName || !body.ownerEmail) {
       return NextResponse.json(
@@ -68,6 +72,7 @@ export async function POST(req: NextRequest) {
       slug,
     });
 
+    await commitToTurso();
     return NextResponse.json({ restaurant: created }, { status: 201 });
   } catch (error: unknown) {
     const msg =

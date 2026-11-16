@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   createOrder,
   getPlatformIntegrationsConfig,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listMenuItems,
   listOrders,
   updateOrderIntegrationFields,
@@ -26,6 +28,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const decodedSlug = decodeURIComponent(slug);
     const restaurant = getRestaurantBySlugOrDomain(decodedSlug);
@@ -59,6 +62,7 @@ export async function POST(
       const updated = updateRestaurantTenant(restaurant.id, {
         integrationsConfig: nextConfig,
       });
+      await commitToTurso();
       return NextResponse.json({
         ok: true,
         integrationsConfig: updated?.integrationsConfig,

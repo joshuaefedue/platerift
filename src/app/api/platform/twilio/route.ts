@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   createSmsLog,
   getPlatformTwilioConfig,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listAllPlatformSmsLogs,
   updatePlatformTwilioConfig,
 } from "@/lib/db";
 
 export async function GET() {
   try {
+    await hydrateFromTursoIfNeeded();
     const config = getPlatformTwilioConfig();
     const recentSmsLogs = listAllPlatformSmsLogs(50);
     return NextResponse.json({
@@ -26,6 +29,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const body = await req.json();
 
     // Action 1: Test Order Notification to a Restaurant Owner
@@ -65,6 +69,7 @@ export async function POST(req: NextRequest) {
         provider: config.mode === "live" ? "twilio_live" : "twilio_simulated",
       });
 
+      await commitToTurso();
       const recentSmsLogs = listAllPlatformSmsLogs(50);
       return NextResponse.json({
         smsLog,
@@ -74,6 +79,7 @@ export async function POST(req: NextRequest) {
 
     // Action 2: Save Super Admin Platform Twilio Gateway Config
     const updated = updatePlatformTwilioConfig(body);
+    await commitToTurso();
     const recentSmsLogs = listAllPlatformSmsLogs(50);
     return NextResponse.json({
       config: updated,

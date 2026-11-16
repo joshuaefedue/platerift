@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   createOrder,
   getPlatformIntegrationsConfig,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listMenuItems,
   listOrders,
   updateOrderStatus,
@@ -19,6 +21,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
     if (!restaurant) {
@@ -282,6 +285,7 @@ export async function POST(
       deliveryTracking: preDispatchedDeliveryTracking,
     });
 
+    await commitToTurso();
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("POST order error:", error);
@@ -294,6 +298,7 @@ export async function POST(
 
 export async function PATCH(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const body = await req.json();
     if (!body.orderId || !body.status) {
       return NextResponse.json(
@@ -307,6 +312,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
+    await commitToTurso();
     return NextResponse.json(result);
   } catch (error) {
     console.error("PATCH order status error:", error);

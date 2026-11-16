@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   getPlatformIntegrationsConfig,
   getPlatformTwilioConfig,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listCustomers,
   listEmailCampaigns,
   listMenuItems,
@@ -19,6 +21,7 @@ export async function GET(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const decodedSlug = decodeURIComponent(slug);
     const restaurant = getRestaurantBySlugOrDomain(decodedSlug);
@@ -79,6 +82,7 @@ export async function PATCH(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const decodedSlug = decodeURIComponent(slug);
     const body = await req.json();
@@ -91,6 +95,7 @@ export async function PATCH(
       );
     }
 
+    await commitToTurso();
     const orders = listOrders(updated.id);
     const availability = evaluateRestaurantAvailability(updated, orders);
 

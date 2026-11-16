@@ -1031,10 +1031,10 @@ export default function SuperAdminDashboard() {
                       : "WAITING FOR TURSO ENV VARS"}
                   </span>
                 </div>
-                <p className="truncate text-[11px] text-slate-400 mt-0.5">
+                <p className="text-[11px] text-slate-400 mt-0.5">
                   {tursoStatus?.connected ? (
                     <>
-                      Host: <span className="font-mono text-slate-300">{tursoStatus.tursoHost}</span> • Cloud Rows:{" "}
+                      Host: <span className="font-mono text-slate-300">{tursoStatus.tursoHost}</span> (via <code className="text-emerald-300">{tursoStatus.envVarDetected}</code>) • Cloud Rows:{" "}
                       <strong className="text-emerald-300">
                         {tursoStatus.tursoCounts?.restaurants ?? 0}
                       </strong>{" "}
@@ -1048,11 +1048,16 @@ export default function SuperAdminDashboard() {
                       </strong>{" "}
                       orders
                     </>
+                  ) : tursoStatus?.configured && tursoStatus?.error ? (
+                    <span className="text-rose-300">
+                      ⚠️ Turso URL found (<span className="font-mono">{tursoStatus.tursoHost}</span> via <code>{tursoStatus.envVarDetected}</code>), but connection failed: <strong>{tursoStatus.error}</strong>. Check your <code>TURSO_AUTH_TOKEN</code> in Vercel Settings.
+                    </span>
                   ) : (
                     <>
-                      Ensure <code className="text-orange-300">TURSO_DATABASE_URL</code> &amp;{" "}
-                      <code className="text-orange-300">TURSO_AUTH_TOKEN</code> are connected to your Vercel project, then click{" "}
-                      <strong className="text-white">Sync All to Turso</strong>.
+                      Detected Env Vars: <code className="text-amber-300">{tursoStatus?.envVarDetected || "none"}</code>. Ensure{" "}
+                      <code className="text-orange-300">TURSO_DATABASE_URL</code> &amp;{" "}
+                      <code className="text-orange-300">TURSO_AUTH_TOKEN</code> are set in Vercel Environment Variables (and redeployed), then click{" "}
+                      <strong className="text-white">Sync All Data with Turso</strong>.
                     </>
                   )}
                 </p>

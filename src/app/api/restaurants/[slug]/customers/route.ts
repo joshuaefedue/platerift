@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   createCustomerManual,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
 } from "@/lib/db";
 
 export async function POST(
@@ -9,6 +11,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
     if (!restaurant) {
@@ -31,6 +34,7 @@ export async function POST(
       restaurantId: restaurant.id,
     });
 
+    await commitToTurso();
     return NextResponse.json({ customer }, { status: 201 });
   } catch (error) {
     console.error("POST customer error:", error);

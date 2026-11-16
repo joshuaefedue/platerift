@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   createMenuItem,
   deleteMenuItem,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   updateMenuItem,
 } from "@/lib/db";
 
@@ -11,6 +13,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
     if (!restaurant) {
@@ -34,6 +37,7 @@ export async function POST(
       price: Number(body.price),
     });
 
+    await commitToTurso();
     return NextResponse.json({ item }, { status: 201 });
   } catch (error) {
     console.error("POST menu item error:", error);
@@ -46,6 +50,7 @@ export async function POST(
 
 export async function PATCH(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const body = await req.json();
     const { itemId, ...updates } = body;
     if (!itemId) {
@@ -60,6 +65,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
     }
 
+    await commitToTurso();
     return NextResponse.json({ item: updated });
   } catch (error) {
     console.error("PATCH menu item error:", error);
@@ -72,6 +78,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    await hydrateFromTursoIfNeeded();
     const itemId = req.nextUrl.searchParams.get("itemId");
     if (!itemId) {
       return NextResponse.json(
@@ -81,6 +88,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const deleted = deleteMenuItem(itemId);
+    await commitToTurso();
     return NextResponse.json({ deleted });
   } catch (error) {
     console.error("DELETE menu item error:", error);

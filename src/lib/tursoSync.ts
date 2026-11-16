@@ -19,30 +19,86 @@ export interface TursoConfig {
 }
 
 export function getTursoConfig(): TursoConfig | null {
-  const rawUrl = (
-    process.env.TURSO_DATABASE_URL ||
-    process.env.LIBSQL_URL ||
-    process.env.TURSO_URL ||
-    process.env.DATABASE_URL ||
-    ""
-  ).trim();
+  const candidateUrls = [
+    process.env.TURSO_DATABASE_URL,
+    process.env.STORAGE_URL,
+    process.env.LIBSQL_URL,
+    process.env.TURSO_URL,
+    process.env.DATABASE_URL,
+  ];
+  let rawUrl =
+    candidateUrls
+      .find(
+        (u) =>
+          u &&
+          (u.trim().startsWith("libsql://") ||
+            u.trim().startsWith("https://") ||
+            u.trim().startsWith("wss://"))
+      )
+      ?.trim() || "";
 
-  const authToken = (
+  // Also scan any env var containing TURSO or LIBSQL and URL
+  if (!rawUrl) {
+    for (const [key, val] of Object.entries(process.env)) {
+      if (
+        val &&
+        /(TURSO|LIBSQL)/i.test(key) &&
+        /URL/i.test(key) &&
+        (val.startsWith("libsql://") ||
+          val.startsWith("https://") ||
+          val.startsWith("wss://"))
+      ) {
+        rawUrl = val.trim();
+        break;
+      }
+    }
+  }
+
+  let authToken = (
     process.env.TURSO_AUTH_TOKEN ||
+    process.env.STORAGE_AUTH_TOKEN ||
     process.env.LIBSQL_AUTH_TOKEN ||
     process.env.TURSO_TOKEN ||
     ""
   ).trim();
 
+  if (!authToken) {
+    for (const [key, val] of Object.entries(process.env)) {
+      if (val && /(TURSO|LIBSQL)/i.test(key) && /(TOKEN|SECRET|KEY)/i.test(key)) {
+        authToken = val.trim();
+        break;
+      }
+    }
+  }
+
+  // Extract ?authToken=... if embedded in the URL query string
+  if (rawUrl.includes("?")) {
+    try {
+      const normalizedForParse = rawUrl.replace(/^libsql:\/\//i, "https://");
+      const parsedUrl = new URL(normalizedForParse);
+      const tokenFromQuery =
+        parsedUrl.searchParams.get("authToken") ||
+        parsedUrl.searchParams.get("token");
+      if (tokenFromQuery && !authToken) {
+        authToken = tokenFromQuery;
+      }
+      rawUrl = `${parsedUrl.origin}${parsedUrl.pathname}`;
+    } catch {
+      // Keep original rawUrl
+    }
+  }
+
   if (
     !rawUrl ||
-    (!rawUrl.startsWith("libsql://") && !rawUrl.startsWith("https://"))
+    (!rawUrl.startsWith("libsql://") &&
+      !rawUrl.startsWith("https://") &&
+      !rawUrl.startsWith("wss://"))
   ) {
     return null;
   }
 
   const httpUrl = rawUrl
-    .replace(/^libsql:\/\//i, "https://")
+    .replace(/^(libsql|wss):\/\//i, "https://")
     .replace(/\/+$/, "");
 
   return {
@@ -539,15 +595,11 @@ export async function getTursoCloudStatus(db: DatabaseSync): Promise<{
   const config = getTursoConfig();
   const lastCheckedAt = new Date().toISOString();
 
-  const envVarDetected = process.env.TURSO_DATABASE_URL
-    ? "TURSO_DATABASE_URL"
-    : process.env.LIBSQL_URL
-    ? "LIBSQL_URL"
-    : process.env.TURSO_URL
-    ? "TURSO_URL"
-    : process.env.DATABASE_URL
-    ? "DATABASE_URL"
-    : "none";
+  const detectedDbEnvKeys = Object.keys(process.env).filter((k) =>
+    /(TURSO|LIBSQL|STORAGE|DATABASE)/i.test(k)
+  );
+  const envVarDetected =
+    detectedDbEnvKeys.length > 0 ? detectedDbEnvKeys.join(", ") : "none";
 
   if (!config) {
     return {
@@ -601,6 +653,77 @@ export async function getTursoCloudStatus(db: DatabaseSync): Promise<{
   }
 }
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __plateriftTursoHydrationPromise: Promise<TursoSyncSummary> | null | undefined;
+  // eslint-disable-next-line no-var
+  var __plateriftTursoLastPullMs: number | undefined;
+}
+
+/**
+ * Ensures the local SQLite database has completed initial hydration from Turso
+ * before any read or write executes, preventing cold-start race conditions on Vercel.
+ */
+export async function ensureTursoHydrated(
+  db: DatabaseSync,
+  options?: { forcePullIfOlderThanMs?: number }
+): Promise<void> {
+  const config = getTursoConfig();
+  if (!config) return;
+
+  const now = Date.now();
+  const minAge = options?.forcePullIfOlderThanMs ?? 4000;
+
+  if (!global.__plateriftTursoHydrationPromise) {
+    global.__plateriftTursoHydrationPromise = pullTursoToLocalSqlite(db)
+      .then((res) => {
+        global.__plateriftTursoLastPullMs = Date.now();
+        return res;
+      })
+      .catch((err) => ({
+        connected: false,
+        direction: "pull_turso_to_local" as const,
+        tursoHost: config.httpUrl,
+        tableCounts: {},
+        syncedAt: new Date().toISOString(),
+        error: err instanceof Error ? err.message : String(err),
+      }));
+  }
+
+  await global.__plateriftTursoHydrationPromise;
+
+  if (
+    global.__plateriftTursoLastPullMs &&
+    now - global.__plateriftTursoLastPullMs > minAge
+  ) {
+    try {
+      await pullTursoToLocalSqlite(db);
+      global.__plateriftTursoLastPullMs = Date.now();
+    } catch {
+      // Keep existing local data on transient network error
+    }
+  }
+}
+
+/**
+ * Flush all local SQLite tables to Turso and await completion so Vercel serverless
+ * functions never freeze before the write is committed to Turso Cloud.
+ */
+export async function flushTursoMirror(
+  db: DatabaseSync
+): Promise<TursoSyncSummary | null> {
+  const config = getTursoConfig();
+  if (!config) return null;
+  try {
+    const res = await pushLocalSqliteToTurso(db);
+    global.__plateriftTursoLastPullMs = Date.now();
+    return res;
+  } catch (err) {
+    console.error("Turso flush error:", err);
+    return null;
+  }
+}
+
 /**
  * Fire-and-forget helper to mirror any single-row mutation or full table to Turso
  * whenever a write happens in src/lib/db.ts.
@@ -612,3 +735,4 @@ export function scheduleTursoMirror(db: DatabaseSync): void {
     // Non-blocking background sync
   });
 }
+

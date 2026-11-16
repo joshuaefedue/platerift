@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   createCustomerManual,
   createEmailCampaign,
   createMenuItem,
@@ -9,6 +10,7 @@ import {
   deleteUserAccount,
   getPlatformIntegrationsConfig,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listCustomers,
   listEmailCampaigns,
   listMenuItems,
@@ -161,6 +163,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const decodedSlug = decodeURIComponent(slug);
     const restaurant = getRestaurantBySlugOrDomain(decodedSlug);
