@@ -90,6 +90,11 @@ export default function SuperAdminDashboard() {
     error?: string;
   } | null>(null);
   const [syncingTurso, setSyncingTurso] = useState(false);
+  const [savingIntegrations, setSavingIntegrations] = useState(false);
+  const [lastSavedIntegrationsAt, setLastSavedIntegrationsAt] = useState<
+    string | null
+  >(null);
+  const [showIntegrationSecrets, setShowIntegrationSecrets] = useState(false);
   const [adminView, setAdminView] = useState<
     "tenants" | "users" | "twilio" | "integrations"
   >("tenants");
@@ -174,13 +179,69 @@ export default function SuperAdminDashboard() {
         setUsers(usrData.users);
       }
       if (twilioData.config) {
-        setPlatformTwilio(twilioData.config);
+        let resolvedTwilio = twilioData.config as PlatformTwilioConfig;
+        try {
+          const localTwilioRaw = window.localStorage.getItem(
+            "platerift_platform_twilio_v1"
+          );
+          if (localTwilioRaw) {
+            const localTwilio = JSON.parse(
+              localTwilioRaw
+            ) as PlatformTwilioConfig;
+            if (
+              localTwilio?.updatedAt &&
+              (!resolvedTwilio.updatedAt ||
+                localTwilio.updatedAt > resolvedTwilio.updatedAt)
+            ) {
+              resolvedTwilio = localTwilio;
+              fetch("/api/platform/twilio", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(localTwilio),
+              }).catch(() => {});
+            }
+          }
+        } catch {
+          // Ignore storage error
+        }
+        setPlatformTwilio(resolvedTwilio);
       }
       if (twilioData.recentSmsLogs) {
         setPlatformSmsLogs(twilioData.recentSmsLogs);
       }
       if (intData.config) {
-        setPlatformIntegrations(intData.config);
+        let resolvedInt = intData.config as PlatformIntegrationsConfig;
+        try {
+          const localIntRaw = window.localStorage.getItem(
+            "platerift_platform_integrations_v1"
+          );
+          if (localIntRaw) {
+            const localInt = JSON.parse(
+              localIntRaw
+            ) as PlatformIntegrationsConfig;
+            if (
+              localInt?.updatedAt &&
+              (!resolvedInt.updatedAt ||
+                localInt.updatedAt > resolvedInt.updatedAt)
+            ) {
+              resolvedInt = localInt;
+              // Re-sync local backup to server instance if server cold-started with defaults
+              fetch("/api/platform/integrations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ config: localInt }),
+              }).catch(() => {});
+            } else {
+              window.localStorage.setItem(
+                "platerift_platform_integrations_v1",
+                JSON.stringify(resolvedInt)
+              );
+            }
+          }
+        } catch {
+          // Ignore storage error
+        }
+        setPlatformIntegrations(resolvedInt);
       }
       if (tursoData) {
         setTursoStatus(tursoData);
@@ -226,21 +287,55 @@ export default function SuperAdminDashboard() {
   };
 
   const handleSavePlatformIntegrations = async (
-    nextConfig?: PlatformIntegrationsConfig
+    nextConfig?: PlatformIntegrationsConfig,
+    label?: string
   ) => {
     const payload = nextConfig || platformIntegrations;
     if (!payload) return;
-    const res = await fetch("/api/platform/integrations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ config: payload }),
-    });
-    const data = await res.json();
-    if (res.ok && data.config) {
-      setPlatformIntegrations(data.config);
-      showToastMessage(
-        "🔌 Saved Super Admin Master Integrations setup & owner availability!"
-      );
+    setSavingIntegrations(true);
+    try {
+      const optimistic: PlatformIntegrationsConfig = {
+        ...payload,
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        window.localStorage.setItem(
+          "platerift_platform_integrations_v1",
+          JSON.stringify(optimistic)
+        );
+      } catch {
+        // Ignore storage error
+      }
+
+      const res = await fetch("/api/platform/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config: optimistic }),
+      });
+      const data = await res.json();
+      if (res.ok && data.config) {
+        setPlatformIntegrations(data.config);
+        setLastSavedIntegrationsAt(new Date().toLocaleTimeString());
+        try {
+          window.localStorage.setItem(
+            "platerift_platform_integrations_v1",
+            JSON.stringify(data.config)
+          );
+        } catch {
+          // Ignore storage error
+        }
+        showToastMessage(
+          label
+            ? `✅ Saved ${label} API Keys & Configuration!`
+            : "✅ Saved Partner API Keys & Master Integration Settings!"
+        );
+      } else {
+        showToastMessage(
+          `⚠️ Failed to save API keys: ${data.error || "Unknown error"}`
+        );
+      }
+    } finally {
+      setSavingIntegrations(false);
     }
   };
 
@@ -253,6 +348,15 @@ export default function SuperAdminDashboard() {
     const data = await res.json();
     if (res.ok && data.config) {
       setPlatformIntegrations(data.config);
+      setLastSavedIntegrationsAt(new Date().toLocaleTimeString());
+      try {
+        window.localStorage.setItem(
+          "platerift_platform_integrations_v1",
+          JSON.stringify(data.config)
+        );
+      } catch {
+        // Ignore storage error
+      }
       await fetchRestaurants();
       showToastMessage(
         "🎉 All 4 Integrations (DoorDash Drive, Square, Clover & Vapi) marked Setup Complete and unlocked for all Restaurant Owners!"
@@ -287,14 +391,34 @@ export default function SuperAdminDashboard() {
   const handleSavePlatformTwilio = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!platformTwilio) return;
+    const optimistic: PlatformTwilioConfig = {
+      ...platformTwilio,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      window.localStorage.setItem(
+        "platerift_platform_twilio_v1",
+        JSON.stringify(optimistic)
+      );
+    } catch {
+      // Ignore storage error
+    }
     const res = await fetch("/api/platform/twilio", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(platformTwilio),
+      body: JSON.stringify(optimistic),
     });
     const data = await res.json();
     if (res.ok && data.config) {
       setPlatformTwilio(data.config);
+      try {
+        window.localStorage.setItem(
+          "platerift_platform_twilio_v1",
+          JSON.stringify(data.config)
+        );
+      } catch {
+        // Ignore storage error
+      }
       if (data.recentSmsLogs) setPlatformSmsLogs(data.recentSmsLogs);
       showToastMessage(
         "📲 Saved Super Admin Master Twilio Gateway configuration for all restaurants!"
@@ -2403,11 +2527,22 @@ export default function SuperAdminDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400">
-                      Partner Signing Secret (HS256 Base64URL)
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] text-slate-400">
+                        Partner Signing Secret (HS256 Base64URL)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowIntegrationSecrets(!showIntegrationSecrets)
+                        }
+                        className="text-[10px] font-semibold text-orange-300 hover:text-orange-200"
+                      >
+                        {showIntegrationSecrets ? "🙈 Hide Secret" : "👁️ Show Secret"}
+                      </button>
+                    </div>
                     <input
-                      type="password"
+                      type={showIntegrationSecrets ? "text" : "password"}
                       value={
                         platformIntegrations.doordashDrive.partnerSigningSecret
                       }
@@ -2467,6 +2602,32 @@ export default function SuperAdminDashboard() {
                       className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-sky-300"
                     />
                   </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
+                  <span className="text-[11px] text-slate-400">
+                    {lastSavedIntegrationsAt
+                      ? `✅ Saved at ${lastSavedIntegrationsAt}`
+                      : `Synced (${new Date(
+                          platformIntegrations.updatedAt
+                        ).toLocaleDateString()})`}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={savingIntegrations}
+                    onClick={() =>
+                      handleSavePlatformIntegrations(
+                        platformIntegrations,
+                        "DoorDash Drive"
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {savingIntegrations
+                      ? "Saving..."
+                      : "Save DoorDash API Keys"}
+                  </button>
                 </div>
               </div>
 
@@ -2561,11 +2722,41 @@ export default function SuperAdminDashboard() {
                     />
                   </div>
                   <div>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] text-slate-400">
+                        Square OAuth Client Secret
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowIntegrationSecrets(!showIntegrationSecrets)
+                        }
+                        className="text-[10px] font-semibold text-orange-300 hover:text-orange-200"
+                      >
+                        {showIntegrationSecrets ? "🙈 Hide" : "👁️ Show"}
+                      </button>
+                    </div>
+                    <input
+                      type={showIntegrationSecrets ? "text" : "password"}
+                      value={platformIntegrations.square.partnerClientSecret}
+                      onChange={(e) =>
+                        setPlatformIntegrations({
+                          ...platformIntegrations,
+                          square: {
+                            ...platformIntegrations.square,
+                            partnerClientSecret: e.target.value,
+                          },
+                        })
+                      }
+                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-[11px] text-slate-400">
                       Webhook Signature Key
                     </label>
                     <input
-                      type="text"
+                      type={showIntegrationSecrets ? "text" : "password"}
                       value={platformIntegrations.square.webhookSignatureKey}
                       onChange={(e) =>
                         setPlatformIntegrations({
@@ -2578,6 +2769,29 @@ export default function SuperAdminDashboard() {
                       }
                       className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400">
+                      Square Environment
+                    </label>
+                    <select
+                      value={platformIntegrations.square.environment}
+                      onChange={(e) =>
+                        setPlatformIntegrations({
+                          ...platformIntegrations,
+                          square: {
+                            ...platformIntegrations.square,
+                            environment: e.target.value as
+                              | "sandbox"
+                              | "production",
+                          },
+                        })
+                      }
+                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-emerald-300"
+                    >
+                      <option value="sandbox">Square Sandbox</option>
+                      <option value="production">Square Production</option>
+                    </select>
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-[11px] text-slate-400">
@@ -2598,6 +2812,28 @@ export default function SuperAdminDashboard() {
                       className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-sky-300"
                     />
                   </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
+                  <span className="text-[11px] text-slate-400">
+                    {lastSavedIntegrationsAt
+                      ? `✅ Saved at ${lastSavedIntegrationsAt}`
+                      : "Square OAuth 2.0 + Catalog API v2"}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={savingIntegrations}
+                    onClick={() =>
+                      handleSavePlatformIntegrations(
+                        platformIntegrations,
+                        "Square POS"
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {savingIntegrations ? "Saving..." : "Save Square API Keys"}
+                  </button>
                 </div>
               </div>
 
@@ -2692,6 +2928,36 @@ export default function SuperAdminDashboard() {
                     />
                   </div>
                   <div>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] text-slate-400">
+                        Clover App Secret
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowIntegrationSecrets(!showIntegrationSecrets)
+                        }
+                        className="text-[10px] font-semibold text-orange-300 hover:text-orange-200"
+                      >
+                        {showIntegrationSecrets ? "🙈 Hide" : "👁️ Show"}
+                      </button>
+                    </div>
+                    <input
+                      type={showIntegrationSecrets ? "text" : "password"}
+                      value={platformIntegrations.clover.appSecret}
+                      onChange={(e) =>
+                        setPlatformIntegrations({
+                          ...platformIntegrations,
+                          clover: {
+                            ...platformIntegrations.clover,
+                            appSecret: e.target.value,
+                          },
+                        })
+                      }
+                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-[11px] text-slate-400">
                       Webhook Verification Code
                     </label>
@@ -2712,6 +2978,29 @@ export default function SuperAdminDashboard() {
                       className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
                     />
                   </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400">
+                      Clover Environment
+                    </label>
+                    <select
+                      value={platformIntegrations.clover.environment}
+                      onChange={(e) =>
+                        setPlatformIntegrations({
+                          ...platformIntegrations,
+                          clover: {
+                            ...platformIntegrations.clover,
+                            environment: e.target.value as
+                              | "sandbox"
+                              | "production",
+                          },
+                        })
+                      }
+                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-emerald-300"
+                    >
+                      <option value="sandbox">Clover Sandbox</option>
+                      <option value="production">Clover Production</option>
+                    </select>
+                  </div>
                   <div className="sm:col-span-2">
                     <label className="block text-[11px] text-slate-400">
                       Clover Webhook Receiver URL
@@ -2731,6 +3020,28 @@ export default function SuperAdminDashboard() {
                       className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-sky-300"
                     />
                   </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
+                  <span className="text-[11px] text-slate-400">
+                    {lastSavedIntegrationsAt
+                      ? `✅ Saved at ${lastSavedIntegrationsAt}`
+                      : "Clover OAuth 2.0 + Atomic Orders v3"}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={savingIntegrations}
+                    onClick={() =>
+                      handleSavePlatformIntegrations(
+                        platformIntegrations,
+                        "Clover POS"
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {savingIntegrations ? "Saving..." : "Save Clover API Keys"}
+                  </button>
                 </div>
               </div>
 
@@ -2825,6 +3136,36 @@ export default function SuperAdminDashboard() {
                     />
                   </div>
                   <div>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] text-slate-400">
+                        Master Vapi Private Key
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowIntegrationSecrets(!showIntegrationSecrets)
+                        }
+                        className="text-[10px] font-semibold text-orange-300 hover:text-orange-200"
+                      >
+                        {showIntegrationSecrets ? "🙈 Hide" : "👁️ Show"}
+                      </button>
+                    </div>
+                    <input
+                      type={showIntegrationSecrets ? "text" : "password"}
+                      value={platformIntegrations.vapi.masterPrivateKey}
+                      onChange={(e) =>
+                        setPlatformIntegrations({
+                          ...platformIntegrations,
+                          vapi: {
+                            ...platformIntegrations.vapi,
+                            masterPrivateKey: e.target.value,
+                          },
+                        })
+                      }
+                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
                     <label className="block text-[11px] text-slate-400">
                       Default Hospitality Voice Model
                     </label>
@@ -2862,6 +3203,28 @@ export default function SuperAdminDashboard() {
                       className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-amber-300"
                     />
                   </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
+                  <span className="text-[11px] text-slate-400">
+                    {lastSavedIntegrationsAt
+                      ? `✅ Saved at ${lastSavedIntegrationsAt}`
+                      : "Vapi Voice AI + Live Menu Brain"}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={savingIntegrations}
+                    onClick={() =>
+                      handleSavePlatformIntegrations(
+                        platformIntegrations,
+                        "Vapi Voice AI"
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {savingIntegrations ? "Saving..." : "Save Vapi API Keys"}
+                  </button>
                 </div>
               </div>
             </div>

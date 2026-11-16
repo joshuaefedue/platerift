@@ -36,9 +36,11 @@ import {
   ensureTursoHydrated,
   flushTursoMirror,
   getTursoCloudStatus,
+  pullPlatformSettingFromTurso,
   pullTursoToLocalSqlite,
   pushLocalSqliteToTurso,
   scheduleTursoMirror,
+  upsertPlatformSettingInTurso,
   type TursoSyncSummary,
 } from "./tursoSync";
 import { preserveIfMasked, sanitizeHtmlContent } from "./security";
@@ -103,6 +105,20 @@ export async function hydrateFromTursoIfNeeded(): Promise<void> {
 export async function commitToTurso(): Promise<TursoSyncSummary | null> {
   const db = getDb();
   return flushTursoMirror(db);
+}
+
+export async function commitPlatformSettingToTurso(
+  key: string,
+  valueObj: unknown
+): Promise<boolean> {
+  return upsertPlatformSettingInTurso(key, JSON.stringify(valueObj));
+}
+
+export async function syncPlatformSettingFromTurso(
+  key: string
+): Promise<boolean> {
+  const db = getDb();
+  return pullPlatformSettingFromTurso(db, key);
 }
 
 export async function syncWithTursoNow(
@@ -3001,7 +3017,7 @@ export function getPlatformTwilioConfig(): PlatformTwilioConfig {
     notifyCustomersOnOrderEvents: true,
     ownerNewOrderTemplate:
       "🔔 [Platerift Order Alert — {{restaurant_name}}] New {{order_type}} Order #{{order_number}} ({{total}}) placed by {{customer_name}}. Open your Owner Portal to start preparing!",
-    updatedAt: new Date().toISOString(),
+    updatedAt: "2026-11-08T18:00:00.000Z",
   };
 
   db.prepare(

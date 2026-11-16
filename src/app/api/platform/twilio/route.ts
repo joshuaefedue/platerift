@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitPlatformSettingToTurso,
   commitToTurso,
   createSmsLog,
   getPlatformTwilioConfig,
   getRestaurantBySlugOrDomain,
   hydrateFromTursoIfNeeded,
   listAllPlatformSmsLogs,
+  syncPlatformSettingFromTurso,
   updatePlatformTwilioConfig,
 } from "@/lib/db";
-import { sanitizePlatformTwilioForClient } from "@/lib/security";
 
 export async function GET() {
   try {
     await hydrateFromTursoIfNeeded();
-    const config = sanitizePlatformTwilioForClient(getPlatformTwilioConfig());
+    await syncPlatformSettingFromTurso("twilio_gateway");
+    const config = getPlatformTwilioConfig();
     const recentSmsLogs = listAllPlatformSmsLogs(50);
     return NextResponse.json({
       config,
@@ -31,6 +33,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     await hydrateFromTursoIfNeeded();
+    await syncPlatformSettingFromTurso("twilio_gateway");
     const body = await req.json();
 
     // Action 1: Test Order Notification to a Restaurant Owner
@@ -80,10 +83,11 @@ export async function POST(req: NextRequest) {
 
     // Action 2: Save Super Admin Platform Twilio Gateway Config
     const updated = updatePlatformTwilioConfig(body);
+    await commitPlatformSettingToTurso("twilio_gateway", updated);
     await commitToTurso();
     const recentSmsLogs = listAllPlatformSmsLogs(50);
     return NextResponse.json({
-      config: sanitizePlatformTwilioForClient(updated),
+      config: updated,
       recentSmsLogs,
     });
   } catch (error) {

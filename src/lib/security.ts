@@ -19,7 +19,8 @@ function maskSecretValue(val: string | undefined): string {
 
 export function isMaskedSecret(val: unknown): boolean {
   if (typeof val !== "string") return false;
-  return val.includes(REDACTED_MASK) || val.startsWith("••••");
+  const trimmed = val.trim();
+  return /^••••+.{0,4}$/.test(trimmed);
 }
 
 /**

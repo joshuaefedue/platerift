@@ -447,11 +447,19 @@ export async function pushLocalSqliteToTurso(
     };
   }
 
-  // 1. Ensure all tables exist on Turso
-  await executeTursoPipeline(
-    config,
-    TURSO_SCHEMA_STATEMENTS.map((sql) => ({ sql }))
-  );
+  // 1. Ensure all tables exist on Turso and inspect existing platform_settings in Turso
+  const initResults = await executeTursoPipeline(config, [
+    ...TURSO_SCHEMA_STATEMENTS.map((sql) => ({ sql })),
+    { sql: "SELECT key, valueJson FROM platform_settings" },
+  ]);
+  const tursoSettingsRows =
+    initResults[TURSO_SCHEMA_STATEMENTS.length]?.rows || [];
+  const tursoSettingsMap = new Map<string, string>();
+  for (const r of tursoSettingsRows) {
+    if (r.key && r.valueJson) {
+      tursoSettingsMap.set(String(r.key), String(r.valueJson));
+    }
+  }
 
   // 2. Build batched INSERT OR REPLACE statements for all 9 tables
   const statements: { sql: string; args: unknown[] }[] = [];
@@ -471,6 +479,28 @@ export async function pushLocalSqliteToTurso(
     const sql = `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${placeholders})`;
 
     for (const row of rows) {
+      // Never overwrite a newer Turso platform_settings record with an older local or default seed snapshot
+      if (table === "platform_settings") {
+        const k = String(row.key || "");
+        const localVal = String(row.valueJson || "");
+        const remoteVal = tursoSettingsMap.get(k);
+        if (remoteVal) {
+          try {
+            const localTs = JSON.parse(localVal)?.updatedAt || "";
+            const remoteTs = JSON.parse(remoteVal)?.updatedAt || "";
+            if (remoteTs && (!localTs || remoteTs > localTs)) {
+              // Sync the newer remote value back into local SQLite instead of overwriting Turso
+              db.prepare(
+                "INSERT OR REPLACE INTO platform_settings (key, valueJson) VALUES (?, ?)"
+              ).run(k, remoteVal);
+              continue;
+            }
+          } catch {
+            // Proceed
+          }
+        }
+      }
+
       statements.push({
         sql,
         args: cols.map((c) => row[c]),
@@ -543,14 +573,33 @@ export async function pullTursoToLocalSqlite(
       tableCounts[table] = rows.length;
       if (rows.length === 0) continue;
 
-      const cols = Object.keys(rows[0]);
-      const colList = cols.join(", ");
-      const placeholders = cols.map(() => "?").join(", ");
-      const stmt = db.prepare(
-        `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${placeholders})`
-      );
-
       for (const row of rows) {
+        if (table === "platform_settings") {
+          const k = String(row.key || "");
+          const tursoVal = String(row.valueJson || "");
+          const localRow = db
+            .prepare("SELECT valueJson FROM platform_settings WHERE key = ?")
+            .get(k) as { valueJson: string } | undefined;
+          if (localRow?.valueJson) {
+            try {
+              const tursoTs = JSON.parse(tursoVal)?.updatedAt || "";
+              const localTs = JSON.parse(localRow.valueJson)?.updatedAt || "";
+              // Never overwrite a newer local platform_settings record with an older Turso snapshot
+              if (localTs && tursoTs && localTs > tursoTs) {
+                continue;
+              }
+            } catch {
+              // Proceed with replace
+            }
+          }
+        }
+
+        const cols = Object.keys(row);
+        const colList = cols.join(", ");
+        const placeholders = cols.map(() => "?").join(", ");
+        const stmt = db.prepare(
+          `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${placeholders})`
+        );
         stmt.run(...(cols.map((c) => row[c]) as (string | number | null)[]));
       }
     }
@@ -706,9 +755,77 @@ export async function ensureTursoHydrated(
 }
 
 /**
- * Flush all local SQLite tables to Turso and await completion so Vercel serverless
- * functions never freeze before the write is committed to Turso Cloud.
+ * Targeted single-statement write directly to Turso Cloud so critical saves
+ * (like Platform API Keys) commit in a single fast round-trip.
  */
+export async function upsertPlatformSettingInTurso(
+  key: string,
+  valueJson: string
+): Promise<boolean> {
+  const config = getTursoConfig();
+  if (!config) return false;
+  try {
+    await executeTursoPipeline(config, [
+      {
+        sql: `CREATE TABLE IF NOT EXISTS platform_settings (key TEXT PRIMARY KEY, valueJson TEXT NOT NULL)`,
+      },
+      {
+        sql: `INSERT OR REPLACE INTO platform_settings (key, valueJson) VALUES (?, ?)`,
+        args: [key, valueJson],
+      },
+    ]);
+    return true;
+  } catch (err) {
+    console.error("Failed to upsert platform_setting to Turso:", err);
+    return false;
+  }
+}
+
+export async function pullPlatformSettingFromTurso(
+  db: DatabaseSync,
+  key: string
+): Promise<boolean> {
+  const config = getTursoConfig();
+  if (!config) return false;
+  try {
+    const res = await executeTursoPipeline(config, [
+      {
+        sql: `CREATE TABLE IF NOT EXISTS platform_settings (key TEXT PRIMARY KEY, valueJson TEXT NOT NULL)`,
+      },
+      {
+        sql: `SELECT valueJson FROM platform_settings WHERE key = ?`,
+        args: [key],
+      },
+    ]);
+    const remoteRow = res[1]?.rows?.[0];
+    if (remoteRow && typeof remoteRow.valueJson === "string") {
+      const remoteVal = remoteRow.valueJson;
+      const localRow = db
+        .prepare("SELECT valueJson FROM platform_settings WHERE key = ?")
+        .get(key) as { valueJson: string } | undefined;
+
+      if (localRow?.valueJson) {
+        try {
+          const remoteTs = JSON.parse(remoteVal)?.updatedAt || "";
+          const localTs = JSON.parse(localRow.valueJson)?.updatedAt || "";
+          if (localTs && remoteTs && localTs > remoteTs) {
+            return true;
+          }
+        } catch {
+          // Proceed with replace
+        }
+      }
+
+      db.prepare(
+        "INSERT OR REPLACE INTO platform_settings (key, valueJson) VALUES (?, ?)"
+      ).run(key, remoteVal);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 export async function flushTursoMirror(
   db: DatabaseSync
 ): Promise<TursoSyncSummary | null> {

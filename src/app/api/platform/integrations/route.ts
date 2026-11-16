@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitPlatformSettingToTurso,
   commitToTurso,
   getPlatformIntegrationsConfig,
   getRestaurantBySlugOrDomain,
   hydrateFromTursoIfNeeded,
   listRestaurants,
+  syncPlatformSettingFromTurso,
   updatePlatformIntegrationsConfig,
   updateRestaurantTenant,
 } from "@/lib/db";
-import { sanitizePlatformIntegrationsForClient } from "@/lib/security";
 
 export async function GET() {
   try {
     await hydrateFromTursoIfNeeded();
-    const config = sanitizePlatformIntegrationsForClient(
-      getPlatformIntegrationsConfig()
-    );
+    await syncPlatformSettingFromTurso("platform_integrations");
+    const config = getPlatformIntegrationsConfig();
     const restaurants = listRestaurants();
     return NextResponse.json({
       config,
@@ -33,6 +33,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     await hydrateFromTursoIfNeeded();
+    await syncPlatformSettingFromTurso("platform_integrations");
     const body = await req.json();
 
     // 1. One-Click "Finish Setup & Release All 4 Integrations to Restaurant Owners"
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      await commitPlatformSettingToTurso("platform_integrations", updatedConfig);
       await commitToTurso();
       return NextResponse.json({
         ok: true,
@@ -116,10 +118,11 @@ export async function POST(req: NextRequest) {
 
     // 3. Save updated PlatformIntegrationsConfig from Super Admin Console
     const updated = updatePlatformIntegrationsConfig(body.config || body);
+    await commitPlatformSettingToTurso("platform_integrations", updated);
     await commitToTurso();
     return NextResponse.json({
       ok: true,
-      config: sanitizePlatformIntegrationsForClient(updated),
+      config: updated,
     });
   } catch (err) {
     console.error("Error updating platform integrations:", err);
