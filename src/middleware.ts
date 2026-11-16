@@ -5,6 +5,8 @@ const PLATFORM_HOSTS = new Set([
   "127.0.0.1",
   "platerift.app",
   "www.platerift.app",
+  "platerift.com",
+  "www.platerift.com",
 ]);
 
 export function middleware(req: NextRequest) {
@@ -28,16 +30,17 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // Real Host-header multi-tenant Custom Domain & Subdomain routing
-  const isLocal =
+  // Always serve the Marketing Landing Page at "/" on primary platform / local / Vercel hosts
+  const isPlatformOrDefaultHost =
+    PLATFORM_HOSTS.has(hostname) ||
     hostname === "localhost" ||
     hostname === "127.0.0.1" ||
     hostname.endsWith(".localhost") ||
-    hostname.endsWith(".vercel.app");
+    hostname.endsWith(".vercel.app") ||
+    hostname.includes("platerift");
 
-  if (!PLATFORM_HOSTS.has(hostname) && !isLocal) {
-    // If a customer accesses https://orders.bellanapoli.com/ directly,
-    // rewrite transparently to /store/orders.bellanapoli.com
+  if (!isPlatformOrDefaultHost) {
+    // Only rewrite to /store/<hostname> if a restaurant explicitly mapped a verified custom domain
     if (
       !url.pathname.startsWith("/store/") &&
       !url.pathname.startsWith("/dashboard/") &&

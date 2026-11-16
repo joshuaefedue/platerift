@@ -107,7 +107,7 @@ const PROBLEMS_AND_SOLUTIONS = [
 
 const DEMO_RESTAURANTS = [
   {
-    name: "Bella Napoli Pizzeria",
+    name: "Bella Napoli Trattoria",
     slug: "bella-napoli",
     cuisine: "Artisanal Wood-Fired Pizza & Pasta",
     emoji: "🍕",
@@ -115,19 +115,19 @@ const DEMO_RESTAURANTS = [
     highlight: "Editorial Warmth theme • DoorDash Drive + Square POS",
   },
   {
-    name: "Sakura Izakaya & Ramen",
-    slug: "sakura-izakaya",
+    name: "Sakura Izakaya & Sushi",
+    slug: "sakura-sushi",
     cuisine: "Authentic Tokyo Ramen & Omakase Sushi",
-    emoji: "🍜",
-    domain: "order.sakuraramen.io",
+    emoji: "🍣",
+    domain: "eat.sakurasushi.io",
     highlight: "Midnight Luxe theme • Clover KDS + Vapi Voice AI",
   },
   {
-    name: "Fuego Street Taqueria",
+    name: "Fuego Craft Taqueria",
     slug: "fuego-taqueria",
     cuisine: "Birria Tacos, Quesabirria & Craft Aguas Frescas",
     emoji: "🌮",
-    domain: "eat.fuegotaqueria.com",
+    domain: "eat.fuegotaqueria.mx",
     highlight: "Vibrant Streetfood theme • Food Truck Commissary Stock",
   },
 ];
@@ -645,3 +645,4 @@ export default function MarketingLandingPage() {
     </div>
   );
 }
+

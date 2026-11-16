@@ -685,12 +685,20 @@ export default function CustomerOrderingStorefront() {
         <p className="mt-2 text-sm text-zinc-400">
           No restaurant tenant is mapped to &quot;{slug}&quot;.
         </p>
-        <Link
-          href="/admin"
-          className="mt-5 rounded-full bg-gold-400 px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-black"
-        >
-          Back to Super Admin Console
-        </Link>
+        <div className="mt-5 flex items-center gap-3">
+          <Link
+            href="/"
+            className="rounded-full bg-gold-400 px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-black"
+          >
+            Back to Home
+          </Link>
+          <Link
+            href="/admin"
+            className="rounded-full border border-zinc-700 bg-zinc-900 px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-200 hover:text-white"
+          >
+            Super Admin Console
+          </Link>
+        </div>
       </div>
     );
   }
@@ -1339,16 +1347,22 @@ export default function CustomerOrderingStorefront() {
                   </div>
                 </div>
 
-                <div className="pt-1 flex items-center gap-2 border-t border-zinc-800/80">
+                <div className="pt-1 flex items-center gap-1.5 border-t border-zinc-800/80">
                   <Link
                     href={`/dashboard/${restaurant.slug}`}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 border border-zinc-700 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:border-zinc-500 transition"
+                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-zinc-900 border border-zinc-700 px-2 py-1.5 text-[11px] font-semibold text-white hover:border-zinc-500 transition"
                   >
                     <LayoutDashboard className="h-3 w-3" /> Owner Portal
                   </Link>
                   <Link
+                    href="/"
+                    className="inline-flex items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-1.5 text-[11px] text-zinc-400 hover:text-white transition"
+                  >
+                    Home
+                  </Link>
+                  <Link
                     href="/admin"
-                    className="inline-flex items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 text-[11px] text-zinc-400 hover:text-white transition"
+                    className="inline-flex items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-1.5 text-[11px] text-zinc-400 hover:text-white transition"
                   >
                     Admin
                   </Link>
