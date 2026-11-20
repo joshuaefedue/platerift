@@ -11,6 +11,7 @@ import {
   CalendarClock,
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
   Clock,
   CreditCard,
   ExternalLink,
@@ -25,6 +26,7 @@ import {
   PauseCircle,
   Pencil,
   PlayCircle,
+  Plug,
   Plus,
   RefreshCw,
   Save,
@@ -35,6 +37,8 @@ import {
   Sparkles,
   Store,
   Trash2,
+  TrendingUp,
+  Truck,
   Upload,
   UserPlus,
   Users,
@@ -118,6 +122,7 @@ export default function RestaurantOwnerPortal() {
     customDomain: string;
   } | null>(null);
   const [staffLoginInput, setStaffLoginInput] = useState("");
+  const [showRolePinPanel, setShowRolePinPanel] = useState(false);
   const [simulatedRole, setSimulatedRole] =
     useState<RestaurantRole>("restaurant_owner");
   const [availability, setAvailability] =
@@ -1172,28 +1177,28 @@ export default function RestaurantOwnerPortal() {
 
   const navGroups = [
     {
-      groupLabel: "Daily Kitchen & Food",
+      groupLabel: "Operations",
       items: [
         {
           id: "orders" as ActiveTab,
-          label: "1. Customer Orders",
+          label: "Orders",
           badge: `${orders.length}`,
           icon: ShoppingBag,
         },
         {
           id: "menu" as ActiveTab,
-          label: "2. Food Menu & Sold-Out",
+          label: "Menu & 86s",
           badge: `${menuItems.length}`,
           alertBadge:
             menuItems.filter((m) => !m.available).length > 0
-              ? `${menuItems.filter((m) => !m.available).length} Sold Out`
+              ? `${menuItems.filter((m) => !m.available).length} Out`
               : undefined,
           icon: Utensils,
         },
         {
           id: "inventory" as ActiveTab,
-          label: "3. Kitchen Stock & Profit",
-          badge: `${restaurant.inventoryConfig?.items?.length || 8} Cards`,
+          label: "Stock & Margins",
+          badge: `${restaurant.inventoryConfig?.items?.length || 8}`,
           alertBadge:
             (restaurant.inventoryConfig?.items?.filter(
               (i) => i.currentStock <= i.reorderPoint
@@ -1208,68 +1213,68 @@ export default function RestaurantOwnerPortal() {
         },
         {
           id: "limits" as ActiveTab,
-          label: "4. Pickup, Delivery & Hours",
+          label: "Hours & Fulfillment",
           badge: `${[
               restaurant.features.pickup,
               restaurant.features.delivery,
               restaurant.features.dineInQr,
             ].filter(Boolean).length
-            } Active`,
+            } On`,
           icon: CalendarClock,
         },
       ],
     },
     {
-      groupLabel: "Customers & Promotions",
+      groupLabel: "Audience & Comms",
       items: [
         {
           id: "customers" as ActiveTab,
-          label: "5. Customer List",
+          label: "Customers",
           badge: `${customers.length}`,
           icon: Users,
         },
         {
           id: "sms" as ActiveTab,
-          label: "6. Phone Text Alerts (SMS)",
+          label: "SMS Alerts",
           badge: `${smsLogs.length}`,
           icon: MessageSquare,
         },
         {
           id: "email" as ActiveTab,
-          label: "7. Promo Emails",
+          label: "Email Campaigns",
           badge: `${emailCampaigns.length}`,
           icon: Mail,
         },
       ],
     },
     {
-      groupLabel: "Money, Website & Staff",
+      groupLabel: "Store & Platform",
       items: [
         {
           id: "payments" as ActiveTab,
-          label: "8. Receive Money (Cards)",
+          label: "Payments & Fees",
           badge:
             restaurant.paymentConfig.stripe.enabled &&
               restaurant.paymentConfig.paypal.enabled
-              ? "2 Active"
-              : "1 Active",
+              ? "2 On"
+              : "1 On",
           icon: CreditCard,
         },
         {
           id: "integrations" as ActiveTab,
-          label: "9. Plug & Play Apps (DoorDash, Square, Clover, Vapi)",
+          label: "Integrations",
           badge: "4 Apps",
-          icon: Sparkles,
+          icon: Plug,
         },
         {
           id: "domain" as ActiveTab,
-          label: "10. Website, Logo & About Us",
+          label: "Website & Brand",
           badge: "Live",
           icon: Globe,
         },
         {
           id: "team" as ActiveTab,
-          label: "11. Kitchen & Cashier Staff",
+          label: "Staff & Roles",
           badge: `${teamMembers.length}`,
           icon: ShieldCheck,
         },
@@ -1292,11 +1297,24 @@ export default function RestaurantOwnerPortal() {
     .flatMap((g) => g.items)
     .find((i) => i.id === activeTab);
 
+  const rolePanelExpanded = showRolePinPanel || Boolean(authGateError);
+  const storeRouteSlug = encodeURIComponent(
+    restaurant.customDomain || restaurant.slug
+  );
+  const activeOrdersCount = orders.filter(
+    (o) => o.status !== "completed" && o.status !== "cancelled"
+  ).length;
+  const soldOutMenuCount = menuItems.filter((m) => !m.available).length;
+  const lowInventoryCount =
+    restaurant.inventoryConfig?.items?.filter(
+      (i) => i.currentStock <= i.reorderPoint
+    ).length || 0;
+
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex min-h-screen bg-[#090b10] text-slate-100">
       {/* Toast */}
       {toast && (
-        <div className="fixed inset-x-4 bottom-20 z-50 flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-slate-900/95 px-4 py-3 text-xs sm:inset-x-auto sm:bottom-6 sm:right-6 sm:px-5 sm:py-3.5 sm:text-sm font-medium text-emerald-300 shadow-2xl backdrop-blur-md">
+        <div className="fixed inset-x-4 bottom-20 z-50 flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-[#0f131b]/95 px-4 py-3 text-xs sm:inset-x-auto sm:bottom-6 sm:right-6 sm:px-5 sm:py-3.5 sm:text-sm font-medium text-emerald-300 shadow-2xl backdrop-blur-md">
           <Sparkles className="h-4 w-4 shrink-0 text-emerald-400" />
           <span>{toast}</span>
         </div>
@@ -1306,37 +1324,37 @@ export default function RestaurantOwnerPortal() {
       {mobileSidebarOpen && (
         <div
           onClick={() => setMobileSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm lg:hidden"
         />
       )}
 
       {/* Left Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col justify-between border-r border-slate-800/90 bg-slate-900/95 backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col justify-between border-r border-white/[0.08] bg-[#0c0f16]/95 backdrop-blur-xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
         {/* Top Sidebar Brand & Tenant Info */}
         <div className="flex flex-col overflow-y-auto">
-          <div className="border-b border-slate-800/90 p-5 space-y-4">
+          <div className="border-b border-white/[0.08] p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition"
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-[#090b10] px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-white/20 hover:text-white transition"
                 >
-                  <ArrowLeft className="h-3.5 w-3.5 text-orange-400" />
+                  <ArrowLeft className="h-3 w-3 text-orange-400" />
                   Home
                 </Link>
                 <Link
                   href="/admin"
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition"
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-[#090b10] px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:border-white/20 hover:text-white transition"
                 >
                   Super Admin
                 </Link>
               </div>
               <button
                 onClick={() => setMobileSidebarOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
+                className="rounded-lg p-1 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1344,23 +1362,21 @@ export default function RestaurantOwnerPortal() {
 
             <div className="flex items-center gap-3">
               <span
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl shadow-lg border border-white/15"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl shadow-lg border border-white/15"
                 style={{ backgroundColor: restaurant.primaryColor }}
               >
                 {restaurant.logoEmoji}
               </span>
               <div className="min-w-0">
-                <h1 className="truncate text-base font-bold text-white">
+                <h1 className="truncate text-sm font-bold text-white">
                   {restaurant.name}
                 </h1>
-                <p className="truncate text-xs text-slate-400">
+                <p className="truncate text-[11px] text-slate-400">
                   {restaurant.ownerName}
                 </p>
-                <div className="mt-1 flex items-center gap-1.5">
-                  <span className="truncate rounded bg-slate-950 px-2 py-0.5 font-mono text-[10px] text-sky-400 border border-slate-800">
-                    {restaurant.customDomain}
-                  </span>
-                </div>
+                <span className="mt-1 inline-block max-w-full truncate rounded bg-[#090b10] px-2 py-0.5 font-mono text-[10px] text-sky-400 border border-white/[0.08]">
+                  {restaurant.customDomain}
+                </span>
               </div>
             </div>
 
@@ -1375,13 +1391,13 @@ export default function RestaurantOwnerPortal() {
                       : "Kitchen temporarily paused incoming online orders.",
                   },
                   !restaurant.orderingEnabled
-                    ? "✅ Online ordering is now LIVE!"
-                    : "⏸️ Online ordering PAUSED immediately."
+                    ? "Online ordering is now LIVE!"
+                    : "Online ordering PAUSED immediately."
                 )
               }
-              className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition ${restaurant.orderingEnabled
-                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
-                  : "bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25"
+              className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition ${restaurant.orderingEnabled
+                  ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20"
+                  : "bg-rose-500/10 text-rose-300 border border-rose-500/30 hover:bg-rose-500/20"
                 }`}
             >
               <span className="flex items-center gap-2">
@@ -1394,23 +1410,23 @@ export default function RestaurantOwnerPortal() {
                   ? "Ordering: LIVE"
                   : "Ordering: PAUSED"}
               </span>
-              <span className="rounded bg-slate-950/60 px-2 py-0.5 text-[10px]">
+              <span className="rounded bg-[#090b10]/80 px-2 py-0.5 text-[10px]">
                 {restaurant.orderingEnabled ? "Pause" : "Resume"}
               </span>
             </button>
 
-            {/* Quick 1-Click Fulfillment Channel Toggles in Sidebar */}
-            <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-2.5 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Fulfillment Options
+            {/* Quick 1-Click Fulfillment Channel Toggles */}
+            <div className="rounded-xl border border-white/[0.08] bg-[#090b10]/90 p-2 space-y-1.5">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  Fulfillment
                 </span>
                 <button
                   type="button"
                   onClick={() => setActiveTab("limits")}
                   className="text-[10px] font-semibold text-orange-400 hover:underline"
                 >
-                  Configure →
+                  Hours &amp; Caps →
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-1">
@@ -1419,21 +1435,22 @@ export default function RestaurantOwnerPortal() {
                     {
                       key: "pickup" as const,
                       label: "Pickup",
-                      emoji: "🛍️",
+                      icon: ShoppingBag,
                     },
                     {
                       key: "delivery" as const,
                       label: "Delivery",
-                      emoji: "🛵",
+                      icon: Truck,
                     },
                     {
                       key: "dineInQr" as const,
                       label: "Dine-In",
-                      emoji: "🍽️",
+                      icon: Utensils,
                     },
                   ] as const
                 ).map((ch) => {
                   const isOn = Boolean(restaurant.features[ch.key]);
+                  const ChIcon = ch.icon;
                   return (
                     <button
                       key={ch.key}
@@ -1446,7 +1463,7 @@ export default function RestaurantOwnerPortal() {
                         ].filter(Boolean).length;
                         if (isOn && activeCount <= 1) {
                           notify(
-                            "⚠️ At least one fulfillment option must remain enabled."
+                            "At least one fulfillment option must remain enabled."
                           );
                           return;
                         }
@@ -1460,115 +1477,131 @@ export default function RestaurantOwnerPortal() {
                         });
                         saveRestaurantPatch(
                           { features: nextFeatures },
-                          `${ch.emoji} ${ch.label} fulfillment ${!isOn ? "ENABLED" : "DISABLED"
+                          `${ch.label} fulfillment ${!isOn ? "ENABLED" : "DISABLED"
                           }!`
                         );
                       }}
                       className={`flex flex-col items-center justify-center rounded-lg border px-1.5 py-1.5 text-[10px] font-semibold transition ${isOn
-                          ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-                          : "border-slate-800 bg-slate-900/60 text-slate-500 hover:text-slate-300"
+                          ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-300"
+                          : "border-white/[0.07] bg-white/[0.02] text-slate-500 hover:text-slate-300"
                         }`}
                       title={`Click to ${isOn ? "disable" : "enable"} ${ch.label}`}
                     >
-                      <span>{ch.emoji}</span>
+                      <ChIcon className="h-3.5 w-3.5" />
                       <span className="mt-0.5">{ch.label}</span>
-                      <span className="font-mono text-[8px] uppercase">
-                        {isOn ? "ON" : "OFF"}
-                      </span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Active Staff Role Switcher & PIN Auth */}
-            <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-2.5 space-y-2">
-              <div className="flex items-center justify-between gap-2 text-[10px] font-mono uppercase tracking-wider text-slate-400">
-                <span className="truncate">
-                  {activeSession
-                    ? `Session: ${activeSession.name}`
-                    : loggedInStaff
-                    ? `Signed In: ${loggedInStaff.name}`
-                    : "Staff Role & PIN Login:"}
-                </span>
-                {activeSession ? (
-                  <button
-                    type="button"
-                    onClick={handleStaffSignOut}
-                    className="inline-flex items-center gap-1 rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition shrink-0"
-                    title="Sign Out"
-                  >
-                    <LogOut className="h-2.5 w-2.5" />
-                    Sign Out
-                  </button>
+            {/* Collapsible Staff Role Switcher & PIN Auth */}
+            <div className="rounded-xl border border-white/[0.08] bg-[#090b10]/90 p-2.5 space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowRolePinPanel((prev) => !prev)}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <ShieldCheck
+                    className={`h-3.5 w-3.5 shrink-0 ${
+                      activeSession ? "text-emerald-400" : "text-orange-400"
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate text-[11px] font-semibold text-white">
+                      {activeSession
+                        ? activeSession.name
+                        : loggedInStaff
+                        ? loggedInStaff.name
+                        : ROLE_DEFINITIONS[simulatedRole]?.label || "Restaurant Owner"}
+                    </div>
+                    <div className="truncate text-[10px] text-slate-400">
+                      {activeSession
+                        ? `${ROLE_DEFINITIONS[activeSession.role as UserRole]?.label || activeSession.role} • Signed In`
+                        : "Switch Role / Staff PIN Login"}
+                    </div>
+                  </div>
+                </div>
+                {rolePanelExpanded ? (
+                  <ChevronUp className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                 ) : (
-                  <ShieldCheck className="h-3.5 w-3.5 text-orange-400 shrink-0" />
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                 )}
-              </div>
-              {activeSession && (
-                <div className="flex items-center justify-between gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px]">
-                  <span className="truncate font-semibold text-emerald-300">
-                    {ROLE_DEFINITIONS[activeSession.role as UserRole]?.label ||
-                      activeSession.role}
-                  </span>
-                  <span className="shrink-0 font-mono text-[9px] uppercase text-emerald-400">
-                    Cookie Active
-                  </span>
+              </button>
+
+              {rolePanelExpanded && (
+                <div className="space-y-2 border-t border-white/[0.08] pt-2">
+                  {activeSession && (
+                    <div className="flex items-center justify-between gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px]">
+                      <span className="truncate font-semibold text-emerald-300">
+                        Cookie Active
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleStaffSignOut}
+                        className="inline-flex items-center gap-1 font-semibold text-slate-300 hover:text-rose-300 transition shrink-0"
+                      >
+                        <LogOut className="h-2.5 w-2.5" />
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
+                  <select
+                    value={simulatedRole}
+                    onChange={(e) =>
+                      handleRoleSwitch(e.target.value as RestaurantRole)
+                    }
+                    className="w-full rounded-lg border border-white/10 bg-[#0f131b] px-2.5 py-1.5 text-xs font-semibold text-white focus:border-orange-500/60 focus:outline-none"
+                  >
+                    <option value="restaurant_owner">
+                      Restaurant Owner (All Tabs)
+                    </option>
+                    <option value="general_manager">
+                      General Manager (Ops &amp; Staff)
+                    </option>
+                    <option value="kitchen_chef">
+                      Head Chef (Orders &amp; 86 Menu)
+                    </option>
+                    <option value="cashier_host">
+                      Cashier / Host (Orders &amp; CRM)
+                    </option>
+                    <option value="marketing_manager">
+                      Marketing Lead (CRM, SMS, Email)
+                    </option>
+                  </select>
+                  <form
+                    onSubmit={handleStaffSignIn}
+                    className="flex gap-1.5"
+                  >
+                    <input
+                      type="text"
+                      placeholder="Staff PIN (e.g. 1101) or Email"
+                      value={staffLoginInput}
+                      onChange={(e) => setStaffLoginInput(e.target.value)}
+                      className="w-full rounded-lg border border-white/10 bg-[#0f131b] px-2 py-1 text-[11px] font-mono text-white focus:border-orange-500/60 focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={authGateBusy}
+                      className="rounded-lg bg-orange-500 px-2.5 py-1 text-[10px] font-bold uppercase text-white hover:bg-orange-600 disabled:opacity-50 shrink-0"
+                    >
+                      {authGateBusy ? "..." : "Auth"}
+                    </button>
+                  </form>
                 </div>
               )}
-              <select
-                value={simulatedRole}
-                onChange={(e) =>
-                  handleRoleSwitch(e.target.value as RestaurantRole)
-                }
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white focus:border-orange-500 focus:outline-none"
-              >
-                <option value="restaurant_owner">
-                  👑 Restaurant Owner (All Tabs)
-                </option>
-                <option value="general_manager">
-                  👔 General Manager (Ops & Staff)
-                </option>
-                <option value="kitchen_chef">
-                  👨‍🍳 Head Chef (Orders & 86 Menu)
-                </option>
-                <option value="cashier_host">
-                  🛎️ Cashier / Host (Orders & CRM)
-                </option>
-                <option value="marketing_manager">
-                  📣 Marketing Lead (CRM, SMS, Email)
-                </option>
-              </select>
-              <form
-                onSubmit={handleStaffSignIn}
-                className="flex gap-1.5"
-              >
-                <input
-                  type="text"
-                  placeholder="Staff PIN (e.g. 1101) or Email"
-                  value={staffLoginInput}
-                  onChange={(e) => setStaffLoginInput(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900 px-2 py-1 text-[11px] font-mono text-white"
-                />
-                <button
-                  type="submit"
-                  disabled={authGateBusy}
-                  className="rounded-lg bg-orange-500 px-2.5 py-1 text-[10px] font-bold uppercase text-white hover:bg-orange-600 disabled:opacity-50 shrink-0"
-                >
-                  {authGateBusy ? "..." : "Auth"}
-                </button>
-              </form>
             </div>
           </div>
 
           {/* All Navigation Groups & Items (Filtered by Active Role) */}
-          <nav className="p-4 space-y-6">
+          <nav className="p-3 space-y-5">
             {visibleNavGroups.map((group) => (
-              <div key={group.groupLabel} className="space-y-1.5">
+              <div key={group.groupLabel} className="space-y-1">
                 <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   {group.groupLabel}
                 </p>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {group.items.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -1579,9 +1612,9 @@ export default function RestaurantOwnerPortal() {
                           setActiveTab(item.id);
                           setMobileSidebarOpen(false);
                         }}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-semibold transition ${isActive
-                            ? "bg-gradient-to-r from-orange-500/20 to-rose-500/10 text-orange-300 border border-orange-500/30 shadow-sm"
-                            : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 border border-transparent"
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition ${isActive
+                            ? "bg-orange-500/15 text-orange-300 border border-orange-500/30 shadow-sm"
+                            : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-100 border border-transparent"
                           }`}
                       >
                         <span className="flex items-center gap-2.5 truncate">
@@ -1592,7 +1625,7 @@ export default function RestaurantOwnerPortal() {
                           <span className="truncate">{item.label}</span>
                         </span>
 
-                        <span className="flex items-center gap-1 shrink-0">
+                        <span className="flex items-center gap-1 shrink-0 tabular-nums">
                           {item.alertBadge && (
                             <span className="rounded-md bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-bold text-rose-300">
                               {item.alertBadge}
@@ -1601,7 +1634,7 @@ export default function RestaurantOwnerPortal() {
                           <span
                             className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${isActive
                                 ? "bg-orange-500/20 text-orange-200"
-                                : "bg-slate-800 text-slate-400"
+                                : "bg-white/[0.05] text-slate-400"
                               }`}
                           >
                             {item.badge}
@@ -1617,10 +1650,10 @@ export default function RestaurantOwnerPortal() {
         </div>
 
         {/* Sidebar Footer: Storefront & Custom Domain Shortcuts */}
-        <div className="border-t border-slate-800/90 bg-slate-950/60 p-4 space-y-2.5">
+        <div className="border-t border-white/[0.08] bg-[#090b10]/90 p-3.5 space-y-2">
           <Link
-            href={`/store/${encodeURIComponent(restaurant.customDomain)}`}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3.5 py-2.5 text-xs font-semibold text-white shadow-lg hover:from-orange-600 hover:to-rose-700 transition"
+            href={`/store/${storeRouteSlug}`}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3.5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-orange-500/20 hover:from-orange-600 hover:to-rose-700 transition"
           >
             <Store className="h-4 w-4" />
             Live Customer Storefront
@@ -1629,7 +1662,7 @@ export default function RestaurantOwnerPortal() {
 
           <Link
             href={`/?domain=${encodeURIComponent(restaurant.customDomain)}`}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-[11px] font-medium text-slate-300 hover:bg-slate-800 hover:text-sky-300 transition"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#0f131b] px-3 py-2 text-[11px] font-medium text-slate-300 hover:border-white/20 hover:text-sky-300 transition"
           >
             <Globe className="h-3.5 w-3.5 text-sky-400" />
             Preview {restaurant.customDomain}
@@ -1640,34 +1673,34 @@ export default function RestaurantOwnerPortal() {
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Compact Top Bar for Active Section & Mobile Menu Button */}
-        <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
+        <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[#090b10]/90 backdrop-blur-md">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-3.5">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <button
                 onClick={() => setMobileSidebarOpen(true)}
-                className="shrink-0 rounded-xl border border-slate-800 bg-slate-900 p-2 text-slate-300 hover:bg-slate-800 lg:hidden"
+                className="shrink-0 rounded-xl border border-white/10 bg-[#0f131b] p-2 text-slate-300 hover:bg-white/10 lg:hidden"
                 aria-label="Open navigation menu"
               >
                 <Menu className="h-5 w-5" />
               </button>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate text-base sm:text-lg font-bold text-white">
+                  <h2 className="truncate text-base sm:text-lg font-bold tracking-tight text-white">
                     {activeNavItem?.label || "Restaurant Portal"}
                   </h2>
-                  <span className="truncate rounded-full bg-slate-900 border border-slate-800 px-2.5 py-0.5 text-[11px] text-slate-400">
+                  <span className="truncate rounded-full bg-[#0f131b] border border-white/[0.08] px-2.5 py-0.5 text-[11px] text-slate-400">
                     {restaurant.name}
                   </span>
                 </div>
-                <p className="truncate text-xs text-slate-400">
-                  Owner: {restaurant.ownerName} ({restaurant.ownerEmail}) •{" "}
+                <p className="truncate text-xs text-slate-400 tabular-nums">
+                  {restaurant.ownerName} ({restaurant.ownerEmail}) •{" "}
                   {availability?.activeOrdersThisHour || 0}/
                   {restaurant.maxOrdersPerHour} orders this hour
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
               {activeSession ? (
                 <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs">
                   <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
@@ -1681,14 +1714,14 @@ export default function RestaurantOwnerPortal() {
                   <button
                     type="button"
                     onClick={handleStaffSignOut}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition"
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-[#090b10] px-2 py-0.5 text-[10px] font-semibold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition"
                   >
                     <LogOut className="h-3 w-3" />
                     Sign Out
                   </button>
                 </div>
               ) : (
-                <span className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1.5 text-[11px] font-medium text-slate-400">
+                <span className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#0f131b] px-2.5 py-1.5 text-[11px] font-medium text-slate-400">
                   <Lock className="h-3 w-3 text-orange-400" />
                   {strictAuthEnforced ? "Sign In Required" : "Demo Mode"}
                 </span>
@@ -1696,7 +1729,7 @@ export default function RestaurantOwnerPortal() {
               <button
                 type="button"
                 onClick={() => setShowOwnerAssistant((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-2 text-xs font-bold text-white shadow-md hover:opacity-95 transition"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-md shadow-orange-500/20 hover:opacity-95 transition"
               >
                 <Bot className="h-4 w-4" />
                 <span>AI Agent</span>
@@ -1705,14 +1738,14 @@ export default function RestaurantOwnerPortal() {
                 onClick={() =>
                   loadPortalData(simDay || undefined, simTime || undefined)
                 }
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-2 sm:px-3 text-xs font-medium text-slate-300 hover:bg-slate-800"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#0f131b] px-2.5 py-2 sm:px-3 text-xs font-medium text-slate-300 hover:border-white/20 hover:text-white transition"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 <span className="hidden xs:inline sm:inline">Refresh</span>
               </button>
               <Link
-                href={`/store/${restaurant.slug}`}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/40 bg-orange-500/10 px-2.5 py-2 sm:px-3.5 text-xs font-semibold text-orange-300 hover:bg-orange-500/20"
+                href={`/store/${storeRouteSlug}`}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/35 bg-orange-500/10 px-2.5 py-2 sm:px-3.5 text-xs font-semibold text-orange-300 hover:bg-orange-500/20 transition"
               >
                 <Store className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">View Storefront</span>
@@ -1722,7 +1755,7 @@ export default function RestaurantOwnerPortal() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl px-4 py-5 pb-24 sm:px-6 sm:py-8 lg:pb-8">
+        <main className="mx-auto w-full max-w-6xl px-4 py-5 pb-24 sm:px-6 sm:py-7 lg:pb-8">
           {authGateError && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
               <div className="flex items-center gap-2.5">
@@ -1734,54 +1767,49 @@ export default function RestaurantOwnerPortal() {
               </span>
             </div>
           )}
-          {/* Beginner-Friendly Quick Action Cards & Step-by-Step Guide */}
+          {/* Contextual Quick-Pulse Bar & Collapsible Guide */}
           <OwnerBeginnerGuideBar
             activeTab={activeTab}
             onSelectTab={setActiveTab}
             restaurantName={restaurant.name}
-            soldOutDishesCount={menuItems.filter((m) => !m.available).length}
-            lowStockCount={
-              restaurant.inventoryConfig?.items?.filter(
-                (i) => i.currentStock <= i.reorderPoint
-              ).length || 0
-            }
-            pendingOrdersCount={
-              orders.filter(
-                (o) => o.status !== "completed" && o.status !== "cancelled"
-              ).length
-            }
+            soldOutDishesCount={soldOutMenuCount}
+            lowStockCount={lowInventoryCount}
+            pendingOrdersCount={activeOrdersCount}
           />
 
-          {/* Live Availability Status Strip */}
+          {/* Compact Operational Availability Strip */}
           {availability && (
             <div
-              className={`mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 ${availability.allowed
-                  ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-200"
-                  : "border-amber-500/40 bg-amber-950/30 text-amber-200"
+              className={`mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${availability.allowed
+                  ? "border-emerald-500/25 bg-emerald-950/15 text-emerald-200"
+                  : "border-amber-500/35 bg-amber-950/25 text-amber-200"
                 }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
                 {availability.allowed ? (
-                  <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
                 ) : (
-                  <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
+                  <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
                 )}
-                <div>
-                  <p className="text-sm font-bold">
-                    {availability.title} ({availability.checkedDay}{" "}
-                    {availability.checkedTime})
-                  </p>
-                  <p className="text-xs opacity-90">{availability.message}</p>
+                <div className="min-w-0">
+                  <span className="text-xs sm:text-sm font-semibold text-white">
+                    {availability.title}
+                  </span>
+                  <span className="ml-2 text-xs opacity-80">
+                    ({availability.checkedDay} {availability.checkedTime}) —{" "}
+                    {availability.message}
+                  </span>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] tabular-nums">
                 <button
                   type="button"
                   onClick={() => setActiveTab("limits")}
-                  className="rounded-lg bg-slate-900/80 px-3 py-1.5 border border-orange-500/40 text-orange-300 hover:bg-slate-900 transition"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#090b10]/90 px-2.5 py-1 border border-orange-500/35 text-orange-300 hover:border-orange-500/60 transition"
                 >
-                  ⏳ Advance Notice:{" "}
-                  <strong>
+                  <Clock className="h-3 w-3" />
+                  <span>Lead Time:</span>
+                  <strong className="text-white">
                     {restaurant.advanceNoticeDays > 0 ||
                       restaurant.advanceNoticeHours > 0
                       ? `${restaurant.advanceNoticeDays > 0
@@ -1790,21 +1818,20 @@ export default function RestaurantOwnerPortal() {
                       }${restaurant.advanceNoticeHours > 0
                         ? `${restaurant.advanceNoticeHours}h `
                         : ""
-                      }(+${restaurant.prepTimeMinutes}m prep)`
-                      : `Same-Day (~${restaurant.prepTimeMinutes}m prep)`}
+                      }+ ${restaurant.prepTimeMinutes}m`
+                      : `~${restaurant.prepTimeMinutes}m prep`}
                   </strong>
                 </button>
-                <div className="rounded-lg bg-slate-900/80 px-3 py-1.5 border border-slate-800">
-                  Hourly Load:{" "}
-                  <strong>
-                    {availability.activeOrdersThisHour} /{" "}
-                    {availability.maxOrdersPerHour}
+                <div className="rounded-lg bg-[#090b10]/90 px-2.5 py-1 border border-white/[0.08] text-slate-300">
+                  Hourly:{" "}
+                  <strong className="text-white">
+                    {availability.activeOrdersThisHour}/{availability.maxOrdersPerHour}
                   </strong>
                 </div>
-                <div className="rounded-lg bg-slate-900/80 px-3 py-1.5 border border-slate-800">
-                  Daily Load:{" "}
-                  <strong>
-                    {availability.ordersToday} / {availability.maxOrdersPerDay}
+                <div className="rounded-lg bg-[#090b10]/90 px-2.5 py-1 border border-white/[0.08] text-slate-300">
+                  Daily:{" "}
+                  <strong className="text-white">
+                    {availability.ordersToday}/{availability.maxOrdersPerDay}
                   </strong>
                 </div>
               </div>
@@ -1813,32 +1840,91 @@ export default function RestaurantOwnerPortal() {
 
           {/* TAB 1: LIVE ORDERS & KITCHEN QUEUE (LIST VIEW) */}
           {activeTab === "orders" && (
-            <div className="space-y-6">
+            <div className="space-y-5">
+              {/* 4-Card KPI Pulse Row */}
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4">
+                  <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <span>Active Queue</span>
+                    <ShoppingBag className="h-4 w-4 text-orange-400" />
+                  </div>
+                  <div className="mt-1.5 text-2xl font-bold tabular-nums text-white">
+                    {activeOrdersCount}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-slate-400 tabular-nums">
+                    {orders.length} total tickets stored
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4">
+                  <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <span>Filtered Revenue</span>
+                    <TrendingUp className="h-4 w-4 text-emerald-400" />
+                  </div>
+                  <div className="mt-1.5 text-2xl font-bold tabular-nums text-emerald-400">
+                    ${dateFilteredRevenue.toFixed(2)}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-slate-400 tabular-nums">
+                    Across {dateFilteredOrders.length} matching orders
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4">
+                  <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <span>Menu Sold Out</span>
+                    <Utensils className="h-4 w-4 text-rose-400" />
+                  </div>
+                  <div className="mt-1.5 text-2xl font-bold tabular-nums text-white">
+                    {soldOutMenuCount}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-slate-400 tabular-nums">
+                    of {menuItems.length} catalog dishes paused
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4">
+                  <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <span>Low Stock Alerts</span>
+                    <Package className="h-4 w-4 text-amber-400" />
+                  </div>
+                  <div className="mt-1.5 text-2xl font-bold tabular-nums text-white">
+                    {lowInventoryCount}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-slate-400">
+                    Items at or below par threshold
+                  </div>
+                </div>
+              </div>
+
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-white">
-                    🛍️ Incoming Customer Food Orders
+                  <h2 className="text-lg font-bold tracking-tight text-white">
+                    Incoming Orders
                   </h2>
-                  <p className="text-xs text-slate-300">
-                    Click <strong>Actions</strong> on any order below to mark it{" "}
-                    <strong>Confirmed → Preparing → Ready</strong>. We
-                    automatically text the customer&apos;s phone at every step!
+                  <p className="text-xs text-slate-400">
+                    Use <strong className="text-slate-200">Actions</strong> on
+                    any ticket to move from{" "}
+                    <strong className="text-slate-200">
+                      Confirmed → Preparing → Ready
+                    </strong>
+                    . Guest SMS updates dispatch automatically.
                   </p>
                 </div>
                 <Link
-                  href={`/store/${restaurant.slug}`}
-                  className="rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2 text-xs font-semibold text-orange-300 hover:bg-orange-500/20"
+                  href={`/store/${storeRouteSlug}`}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/35 bg-orange-500/10 px-4 py-2 text-xs font-semibold text-orange-300 hover:bg-orange-500/20 transition"
                 >
-                  + Place a Test Order on Your Website
+                  <Plus className="h-3.5 w-3.5" />
+                  Place Test Order on Storefront
                 </Link>
               </div>
 
               {/* Unified Order Status Dropdown, Date Filter Dropdown & Search Bar */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 space-y-3">
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4 space-y-3">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">
                   {/* 1. Order Status Dropdown */}
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
                       Order Status
                     </label>
                     <select
@@ -1854,13 +1940,13 @@ export default function RestaurantOwnerPortal() {
                             | "cancelled"
                         )
                       }
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:border-orange-500 focus:outline-none"
+                      className="w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs font-semibold text-white focus:border-orange-500/60 focus:outline-none"
                     >
                       <option value="ALL">
                         All Orders ({dateFilteredOrders.length})
                       </option>
                       <option value="confirmed">
-                        ✅ Confirmed (
+                        Confirmed (
                         {
                           dateFilteredOrders.filter(
                             (o) => o.status === "confirmed"
@@ -1869,7 +1955,7 @@ export default function RestaurantOwnerPortal() {
                         )
                       </option>
                       <option value="preparing">
-                        🔥 Preparing (
+                        Preparing (
                         {
                           dateFilteredOrders.filter(
                             (o) => o.status === "preparing"
@@ -1878,7 +1964,7 @@ export default function RestaurantOwnerPortal() {
                         )
                       </option>
                       <option value="ready">
-                        🛎️ Ready for Pickup / Driver (
+                        Ready for Pickup / Driver (
                         {
                           dateFilteredOrders.filter((o) => o.status === "ready")
                             .length
@@ -1886,7 +1972,7 @@ export default function RestaurantOwnerPortal() {
                         )
                       </option>
                       <option value="completed">
-                        🏁 Completed (
+                        Completed (
                         {
                           dateFilteredOrders.filter(
                             (o) => o.status === "completed"
@@ -1895,7 +1981,7 @@ export default function RestaurantOwnerPortal() {
                         )
                       </option>
                       <option value="cancelled">
-                        ❌ Cancelled (
+                        Cancelled (
                         {
                           dateFilteredOrders.filter(
                             (o) => o.status === "cancelled"
@@ -1908,7 +1994,7 @@ export default function RestaurantOwnerPortal() {
 
                   {/* 2. Date Filter Preset Dropdown */}
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
                       Date Filter
                     </label>
                     <select
@@ -1926,22 +2012,22 @@ export default function RestaurantOwnerPortal() {
                             | "custom"
                         )
                       }
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:border-orange-500 focus:outline-none"
+                      className="w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs font-semibold text-white focus:border-orange-500/60 focus:outline-none"
                     >
-                      <option value="all">📅 All Time</option>
-                      <option value="today">📅 Today</option>
-                      <option value="yesterday">📅 Yesterday</option>
-                      <option value="tomorrow">📅 Tomorrow (Scheduled)</option>
-                      <option value="last7">📅 Last 7 Days</option>
-                      <option value="last30">📅 Last 30 Days</option>
-                      <option value="this_month">📅 This Month</option>
-                      <option value="custom">📅 Custom Date Range...</option>
+                      <option value="all">All Time</option>
+                      <option value="today">Today</option>
+                      <option value="yesterday">Yesterday</option>
+                      <option value="tomorrow">Tomorrow (Scheduled)</option>
+                      <option value="last7">Last 7 Days</option>
+                      <option value="last30">Last 30 Days</option>
+                      <option value="this_month">This Month</option>
+                      <option value="custom">Custom Date Range...</option>
                     </select>
                   </div>
 
-                  {/* 3. Date Basis Dropdown (Order Placed vs Pickup/Scheduled) */}
+                  {/* 3. Date Basis Dropdown */}
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
                       Date Type
                     </label>
                     <select
@@ -1951,7 +2037,7 @@ export default function RestaurantOwnerPortal() {
                           e.target.value as "placed" | "scheduled"
                         )
                       }
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:border-orange-500 focus:outline-none"
+                      className="w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs font-semibold text-white focus:border-orange-500/60 focus:outline-none"
                     >
                       <option value="placed">When Order Was Placed</option>
                       <option value="scheduled">
@@ -1962,7 +2048,7 @@ export default function RestaurantOwnerPortal() {
 
                   {/* 4. Search Input */}
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
                       Search Orders
                     </label>
                     <input
@@ -1970,7 +2056,7 @@ export default function RestaurantOwnerPortal() {
                       value={orderSearch}
                       onChange={(e) => setOrderSearch(e.target.value)}
                       placeholder="Order #, customer, dish..."
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+                      className="w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -2031,7 +2117,7 @@ export default function RestaurantOwnerPortal() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono ml-auto">
-                    <span className="rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-slate-300">
+                    <span className="rounded-lg border border-white/[0.08] bg-[#090b10] px-2.5 py-1 text-slate-300">
                       {orderDateRange
                         ? orderDateRange.from === orderDateRange.to
                           ? orderDateRange.from
@@ -2046,7 +2132,7 @@ export default function RestaurantOwnerPortal() {
                             }`
                         : "All dates"}
                     </span>
-                    <span className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-300">
+                    <span className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-semibold tabular-nums text-emerald-300">
                       {dateFilteredOrders.length} orders • $
                       {dateFilteredRevenue.toFixed(2)}
                     </span>
@@ -2055,31 +2141,30 @@ export default function RestaurantOwnerPortal() {
               </div>
 
               {orders.length === 0 ? (
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-12 text-center">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-12 text-center">
                   <ShoppingBag className="mx-auto h-10 w-10 text-slate-600" />
                   <p className="mt-3 text-sm font-semibold text-slate-300">
                     No orders yet for {restaurant.name}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Open the Live Customer Storefront to place a test Stripe or
-                    PayPal order.
+                    Open the Live Customer Storefront to place a test order.
                   </p>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/90 shadow-lg">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] shadow-lg">
                   {/* Desktop List Column Header */}
-                  <div className="hidden lg:grid lg:grid-cols-12 gap-4 rounded-t-2xl border-b border-slate-800 bg-slate-950/80 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    <div className="col-span-2">Order & Time</div>
+                  <div className="hidden lg:grid lg:grid-cols-12 gap-4 rounded-t-2xl border-b border-white/[0.08] bg-[#090b10]/90 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <div className="col-span-2">Order &amp; Time</div>
                     <div className="col-span-2">Customer</div>
-                    <div className="col-span-4">Items & Special Notes</div>
-                    <div className="col-span-2">Total & Payment</div>
+                    <div className="col-span-4">Items &amp; Special Notes</div>
+                    <div className="col-span-2">Total &amp; Payment</div>
                     <div className="col-span-2 text-right">
-                      Status & Actions
+                      Status &amp; Actions
                     </div>
                   </div>
 
                   {/* Order List Rows */}
-                  <div className="divide-y divide-slate-800/80">
+                  <div className="divide-y divide-white/[0.06]">
                     {dateFilteredOrders.length === 0 && (
                       <div className="p-10 text-center">
                         <CalendarClock className="mx-auto h-8 w-8 text-slate-600" />
@@ -2111,7 +2196,7 @@ export default function RestaurantOwnerPortal() {
                       .map((ord) => (
                         <div
                           key={ord.id}
-                          className="grid grid-cols-1 gap-4 p-4 transition hover:bg-slate-950/40 lg:grid-cols-12 lg:items-center lg:px-5 lg:py-4"
+                          className="grid grid-cols-1 gap-4 p-4 transition hover:bg-white/[0.02] lg:grid-cols-12 lg:items-center lg:px-5 lg:py-4"
                         >
                           {/* Col 1: Order #, Fulfillment Type & Timestamp */}
                           <div className="lg:col-span-2 space-y-1.5">
@@ -7526,7 +7611,7 @@ export default function RestaurantOwnerPortal() {
         {/* Mobile Bottom Quick-Navigation Bar (lg:hidden) */}
         <nav
           aria-label="Mobile quick navigation"
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-800/90 bg-slate-950/95 px-2 py-1.5 backdrop-blur-xl lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.08] bg-[#090b10]/95 px-2 py-1.5 backdrop-blur-xl lg:hidden"
         >
           <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
             {(

@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Sparkles,
+  Truck,
   User,
   UserCheck,
   UserPlus,
@@ -1332,9 +1333,9 @@ export default function CustomerOrderingStorefront() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-[#0b0c10] text-zinc-300 font-sans antialiased selection:bg-gold-500 selection:text-black">
+    <div className="min-h-screen bg-[#090b10] text-zinc-300 font-sans antialiased selection:bg-gold-500 selection:text-black">
       {/* ================= PRIMARY STOREFRONT NAVBAR ================= */}
-      <header className="sticky top-0 z-40 bg-[#0b0c10]/95 backdrop-blur-md border-b border-zinc-800/80">
+      <header className="sticky top-0 z-40 bg-[#090b10]/90 backdrop-blur-md border-b border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* Left: Brand Logo */}
           <div className="flex items-center gap-6 min-w-0">
@@ -1347,7 +1348,7 @@ export default function CustomerOrderingStorefront() {
             </a>
 
             {/* Center/Left: Clean Primary Links */}
-            <nav className="hidden md:flex items-center gap-5 border-l border-zinc-800/80 pl-5 text-xs font-medium text-zinc-400">
+            <nav className="hidden md:flex items-center gap-5 border-l border-white/[0.08] pl-5 text-xs font-medium text-zinc-400">
               <a
                 href="#section-cat-0"
                 className="text-zinc-200 hover:text-white transition"
@@ -1371,7 +1372,7 @@ export default function CustomerOrderingStorefront() {
             </nav>
           </div>
 
-          {/* Right: Clean Customer Actions + Compact Owner Menu */}
+          {/* Right: Clean Customer Actions + Subtle Owner Menu */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             {availability && (
               <span
@@ -1387,9 +1388,9 @@ export default function CustomerOrderingStorefront() {
               </span>
             )}
 
-            {/* Compact Owner / Preview Tools Dropdown (Tucked away cleanly) */}
-            <details className="relative group">
-              <summary className="list-none cursor-pointer inline-flex items-center gap-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 text-[11px] font-medium text-zinc-400 hover:text-white transition">
+            {/* Compact Owner / Preview Tools Dropdown */}
+            <details className="relative group opacity-75 hover:opacity-100 transition-opacity">
+              <summary className="list-none cursor-pointer inline-flex items-center gap-1.5 rounded-full bg-[#0f131b] border border-white/[0.08] hover:border-white/20 px-3 py-1.5 text-[11px] font-medium text-zinc-400 hover:text-white transition">
                 <LayoutDashboard className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Owner Tools</span>
               </summary>
@@ -1577,10 +1578,11 @@ export default function CustomerOrderingStorefront() {
               </div>
               <div>
                 <p
-                  className="text-xs font-bold uppercase tracking-wider"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
                   style={{ color: brandColor }}
                 >
-                  📲 Automated SMS Sent to {sentSmsToast.customerPhone}
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Automated SMS Sent to {sentSmsToast.customerPhone}
                 </p>
                 <p className="mt-1 text-xs text-zinc-300">
                   {sentSmsToast.message}
@@ -1598,7 +1600,16 @@ export default function CustomerOrderingStorefront() {
       )}
 
       {/* ================= EDITORIAL HERO BANNER ================= */}
-      <section className="relative border-b border-zinc-900 py-8 px-4 sm:py-12 sm:px-6 overflow-hidden">
+      <section className="relative border-b border-white/[0.06] py-10 px-4 sm:py-14 sm:px-6 overflow-hidden">
+        {/* Atmospheric Restaurant Banner Layer + Gradient Vignette */}
+        {restaurant.heroBannerUrl && (
+          <img
+            src={restaurant.heroBannerUrl}
+            alt={restaurant.name}
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25"
+          />
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#090b10] via-[#090b10]/85 to-[#090b10]/70" />
         {/* Ambient Brand Color Glow */}
         <div
           className="absolute -top-24 left-1/4 w-[600px] h-[350px] rounded-full blur-[140px] pointer-events-none opacity-20"
@@ -1609,37 +1620,46 @@ export default function CustomerOrderingStorefront() {
           <div className="space-y-3.5 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] tracking-widest uppercase"
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0f131b]/90 border border-white/10 text-[11px] tracking-widest uppercase"
                 style={{ color: brandColor }}
               >
                 {restaurant.cuisine}
               </span>
               {requiresAdvanceNotice && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/60 border border-amber-700/60 text-[11px] font-mono text-amber-300">
-                  ⏳ Earliest Ready: {earliestReadyFormatted}
+                  <Clock className="h-3 w-3" />
+                  Earliest Ready: {earliestReadyFormatted}
                 </span>
               )}
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-5xl text-white font-normal leading-[1.15]">
+            <h1 className="font-serif text-3xl sm:text-5xl text-white font-normal leading-[1.12]">
               {restaurant.name}, crafted for your{" "}
               <span className="italic" style={{ color: brandColor }}>
                 table.
               </span>
             </h1>
-            <p className="text-zinc-400 text-sm sm:text-base font-light leading-relaxed">
+            <p className="text-zinc-300 text-sm sm:text-base font-light leading-relaxed">
               {restaurant.description}
             </p>
           </div>
 
-          {/* Clean Quick Re-Order Actions */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Primary Menu & Guest Re-Order Actions */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <a
+              href="#section-cat-0"
+              style={{ backgroundColor: brandColor, color: "#000" }}
+              className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold hover:opacity-90 transition shadow-lg"
+            >
+              <UtensilsCrossed className="h-3.5 w-3.5 shrink-0" />
+              Browse Menu
+            </a>
             <button
               onClick={() => {
                 setAccountTab(activeCustomer ? "history" : "auth");
                 setShowAccountModal(true);
               }}
-              className="inline-flex items-center gap-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 px-3.5 py-2 text-xs font-medium text-zinc-200 hover:text-white transition"
+              className="inline-flex items-center gap-2 rounded-full bg-[#0f131b]/90 border border-white/15 hover:border-white/30 px-3.5 py-2 text-xs font-medium text-zinc-200 hover:text-white transition"
             >
               <History className="h-3.5 w-3.5 shrink-0" style={{ color: brandColor }} />
               <span>
@@ -1651,21 +1671,15 @@ export default function CustomerOrderingStorefront() {
             {activeCustomer && customerOrders.length > 0 && (
               <button
                 onClick={() => handleInstantReorderNow(customerOrders[0])}
-                style={{ backgroundColor: brandColor, color: "#000" }}
-                className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold hover:opacity-90 transition shadow"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-[#0f131b] px-4 py-2 text-xs font-semibold text-white hover:border-white/30 transition shadow"
               >
-                <Zap className="h-3.5 w-3.5" /> Re-Order Last
+                <Zap className="h-3.5 w-3.5" style={{ color: brandColor }} />
+                Re-Order Last
               </button>
             )}
           </div>
         </div>
       </section>
-
-      {/* ================= ABOUT US SECTION (IMMEDIATELY AFTER HERO) ================= */}
-      <StorefrontAboutSection
-        restaurant={restaurant}
-        brandColor={brandColor}
-      />
 
       {/* Store Availability Warning Banner if Ordering is Paused / Closed / Limit Reached */}
       {availability && !availability.allowed && (
@@ -1681,10 +1695,12 @@ export default function CustomerOrderingStorefront() {
               </div>
             </div>
             <Link
-              href={`/dashboard/${restaurant.slug}`}
-              className="rounded-full border border-rose-700 bg-rose-900/50 px-4 py-1.5 text-xs font-semibold text-white hover:bg-rose-800"
+              href={`/dashboard/${encodeURIComponent(
+                restaurant.customDomain || restaurant.slug
+              )}`}
+              className="rounded-full border border-rose-700 bg-rose-900/50 px-4 py-1.5 text-xs font-semibold text-white hover:bg-rose-800 transition"
             >
-              Adjust Schedule / Limits in Owner Portal →
+              Adjust Schedule in Owner Portal →
             </Link>
           </div>
         </div>
@@ -1693,7 +1709,7 @@ export default function CustomerOrderingStorefront() {
       {/* Live Placed Order Status Tracker */}
       {placedOrder && (
         <div className="mx-auto mt-6 sm:mt-8 max-w-7xl px-4 sm:px-6">
-          <div className="rounded-3xl border border-zinc-800 bg-[#0f1117] p-4 sm:p-6 shadow-2xl space-y-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4 sm:p-6 shadow-2xl space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1701,21 +1717,22 @@ export default function CustomerOrderingStorefront() {
                     className="text-[10px] font-mono uppercase tracking-widest"
                     style={{ color: brandColor }}
                   >
-                    Live Provisioning Tracker • Order #{placedOrder.orderNumber}
+                    Live Order Tracker • Order #{placedOrder.orderNumber}
                   </span>
                   {placedOrder.scheduledFor && (
-                    <span className="rounded-full bg-amber-950/80 border border-amber-700/70 px-2.5 py-0.5 text-[10px] font-mono text-amber-300">
-                      📅 Scheduled For: {placedOrder.scheduledFor}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 border border-amber-700/70 px-2.5 py-0.5 text-[10px] font-mono text-amber-300">
+                      <Calendar className="h-3 w-3" />
+                      Scheduled For: {placedOrder.scheduledFor}
                     </span>
                   )}
                   {placedOrder.posSync?.squareOrderId && (
                     <span className="rounded-full bg-sky-950/80 border border-sky-700/70 px-2.5 py-0.5 text-[10px] font-mono text-sky-300">
-                      ⬛ Square POS: {placedOrder.posSync.squareOrderId}
+                      Square POS: {placedOrder.posSync.squareOrderId}
                     </span>
                   )}
                   {placedOrder.posSync?.cloverOrderId && (
                     <span className="rounded-full bg-emerald-950/80 border border-emerald-700/70 px-2.5 py-0.5 text-[10px] font-mono text-emerald-300">
-                      🍀 Clover KDS: {placedOrder.posSync.cloverOrderId}
+                      Clover KDS: {placedOrder.posSync.cloverOrderId}
                     </span>
                   )}
                 </div>
@@ -1740,21 +1757,23 @@ export default function CustomerOrderingStorefront() {
               <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   onClick={() => openScheduleModalFromOrder(placedOrder)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-800"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#090b10] px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:border-white/25 transition"
                 >
                   <Repeat className="h-3.5 w-3.5" style={{ color: brandColor }} />{" "}
                   Schedule Recurring Re-Order
                 </button>
                 <button
                   onClick={() => loadStorefront(simDay, simTime)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-800"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#090b10] px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:border-white/25 transition"
                 >
                   <RefreshCw className="h-3.5 w-3.5" /> Refresh Status
                 </button>
                 <Link
-                  href={`/dashboard/${restaurant.slug}`}
+                  href={`/dashboard/${encodeURIComponent(
+                    restaurant.customDomain || restaurant.slug
+                  )}`}
                   style={{ backgroundColor: brandColor }}
-                  className="rounded-xl px-4 py-2 text-xs font-semibold text-black hover:opacity-90"
+                  className="rounded-xl px-4 py-2 text-xs font-semibold text-black hover:opacity-90 transition"
                 >
                   Update in Kitchen Portal →
                 </Link>
@@ -1763,11 +1782,12 @@ export default function CustomerOrderingStorefront() {
 
             {/* DoorDash Drive Live Dasher Card inside Storefront Tracker */}
             {placedOrder.deliveryTracking && (
-              <div className="rounded-2xl border border-rose-500/30 bg-rose-950/20 p-4 flex flex-wrap items-center justify-between gap-4">
+              <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-4 flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-rose-500/20 border border-rose-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-200">
-                      🚗 DoorDash Drive White-Label Courier
+                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/20 border border-rose-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-200">
+                      <Truck className="h-3 w-3" />
+                      DoorDash Drive Courier
                     </span>
                     <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase text-emerald-300">
                       Stage:{" "}
@@ -1827,18 +1847,20 @@ export default function CustomerOrderingStorefront() {
                           await loadStorefront(simDay, simTime);
                         }
                       }}
-                      className="rounded-xl border border-rose-500/40 bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-200 hover:bg-rose-500/30 transition"
+                      className="inline-flex items-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-200 hover:bg-rose-500/30 transition"
                     >
-                      ⚡ Advance Dasher Stage →
+                      <Zap className="h-3 w-3" />
+                      Advance Dasher Stage →
                     </button>
                   )}
                   <a
                     href={placedOrder.deliveryTracking.trackingUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-xl bg-rose-500 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-rose-400 transition"
+                    className="inline-flex items-center gap-1 rounded-xl bg-rose-500 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-rose-400 transition"
                   >
-                    📍 Live GPS Tracking Map ↗
+                    <MapPin className="h-3 w-3" />
+                    Live GPS Tracking ↗
                   </a>
                 </div>
               </div>
@@ -1848,17 +1870,17 @@ export default function CustomerOrderingStorefront() {
       )}
 
       {/* ================= ORDERING WORKSPACE ================= */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 pb-28 lg:pb-12 grid lg:grid-cols-12 gap-8 lg:gap-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 pb-28 lg:pb-12 grid lg:grid-cols-12 gap-8 lg:gap-10">
         {/* CATERING / CULINARY MENU (8 Cols) */}
         <div className="lg:col-span-8 space-y-10 sm:space-y-14">
           {/* Category Navigation & Dietary Filter Bar inside Menu List */}
-          <div className="sticky top-16 z-30 -mx-2 px-2 py-3 bg-[#0b0c10]/95 backdrop-blur-md border-b border-zinc-800/80 flex items-center justify-between gap-3">
+          <div className="sticky top-16 z-30 -mx-2 px-2 py-3 bg-[#090b10]/95 backdrop-blur-md border-b border-white/[0.08] flex items-center justify-between gap-3">
             <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
               {categories.map((cat, idx) => (
                 <a
                   key={cat}
                   href={`#section-cat-${idx}`}
-                  className="shrink-0 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 hover:border-zinc-600 text-xs font-medium text-zinc-300 hover:text-white transition whitespace-nowrap"
+                  className="shrink-0 px-3.5 py-1.5 rounded-full bg-[#0f131b] border border-white/[0.08] hover:border-white/25 text-xs font-medium text-zinc-300 hover:text-white transition whitespace-nowrap"
                 >
                   {cat}
                 </a>
@@ -1870,7 +1892,7 @@ export default function CustomerOrderingStorefront() {
                 <select
                   value={selectedDietary}
                   onChange={(e) => setSelectedDietary(e.target.value)}
-                  className="shrink-0 rounded-full bg-zinc-900 border border-zinc-800 px-3 py-1.5 text-xs text-zinc-300 focus:outline-none"
+                  className="shrink-0 rounded-full bg-[#0f131b] border border-white/10 px-3 py-1.5 text-xs text-zinc-300 focus:outline-none"
                   aria-label="Filter by dietary preference"
                 >
                   <option value="ALL">All Dietary</option>
@@ -1900,7 +1922,7 @@ export default function CustomerOrderingStorefront() {
                 id={`section-cat-${catIdx}`}
                 className="space-y-6"
               >
-                <div className="flex justify-between items-end border-b border-zinc-800/80 pb-4">
+                <div className="flex justify-between items-end border-b border-white/[0.08] pb-4">
                   <div>
                     <span
                       className="text-xs font-mono uppercase tracking-widest"
@@ -1918,15 +1940,15 @@ export default function CustomerOrderingStorefront() {
                       kitchen.
                     </p>
                   </div>
-                  <span className="text-xs text-zinc-500 font-mono tracking-wider">
+                  <span className="text-xs text-zinc-500 font-mono tracking-wider tabular-nums">
                     {sectionItems.length}{" "}
                     {sectionItems.length === 1 ? "Selection" : "Selections"}
                   </span>
                 </div>
 
                 {useVisualCards ? (
-                  /* VISUAL BANQUET CARDS (AURA Section 1 Style) */
-                  <div className="grid md:grid-cols-2 gap-6">
+                  /* VISUAL BANQUET CARDS */
+                  <div className="grid md:grid-cols-2 gap-5">
                     {sectionItems.map((item) => {
                       const canOrder =
                         item.available &&
@@ -1934,8 +1956,8 @@ export default function CustomerOrderingStorefront() {
                       return (
                         <div
                           key={item.id}
-                          className={`bg-zinc-900/40 border rounded-2xl overflow-hidden transition flex flex-col justify-between group ${item.available
-                              ? "border-zinc-800/80 hover:border-zinc-700"
+                          className={`bg-[#0f131b]/90 border rounded-2xl overflow-hidden transition-all duration-300 flex flex-col justify-between group ${item.available
+                              ? "border-white/[0.08] hover:border-white/[0.18] hover:-translate-y-0.5 hover:shadow-xl"
                               : "border-rose-900/40 opacity-75"
                             }`}
                         >
@@ -1947,9 +1969,10 @@ export default function CustomerOrderingStorefront() {
                                 className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${!item.available ? "grayscale" : ""
                                   }`}
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                              <span className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-mono tracking-wider text-zinc-200 border border-zinc-700">
-                                ⏱ {item.prepTimeMinutes}m Prep
+                              <div className="absolute inset-0 bg-gradient-to-t from-[#0f131b] via-transparent to-transparent" />
+                              <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-mono tracking-wider text-zinc-200 border border-white/15">
+                                <Clock className="h-3 w-3" />
+                                {item.prepTimeMinutes}m Prep
                                 {item.currentStockCount !== null &&
                                   item.available &&
                                   ` • ${item.currentStockCount} Left`}
@@ -2095,8 +2118,8 @@ export default function CustomerOrderingStorefront() {
                       return (
                         <div
                           key={item.id}
-                          className={`p-4 rounded-2xl bg-zinc-900/40 border flex items-center justify-between gap-4 transition ${item.available
-                              ? "border-zinc-800/80 hover:border-zinc-700"
+                          className={`p-4 rounded-2xl bg-[#0f131b]/90 border flex items-center justify-between gap-4 transition-all ${item.available
+                              ? "border-white/[0.08] hover:border-white/[0.18]"
                               : "border-rose-900/40 opacity-65"
                             }`}
                         >
@@ -2160,8 +2183,8 @@ export default function CustomerOrderingStorefront() {
                       return (
                         <div
                           key={item.id}
-                          className={`p-5 rounded-2xl bg-zinc-900/30 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition ${item.available
-                              ? "border-zinc-800/70 hover:border-zinc-700"
+                          className={`p-5 rounded-2xl bg-[#0f131b]/80 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all ${item.available
+                              ? "border-white/[0.08] hover:border-white/[0.18]"
                               : "border-rose-900/40 opacity-70"
                             }`}
                         >
@@ -2277,22 +2300,22 @@ export default function CustomerOrderingStorefront() {
           })}
         </div>
 
-        {/* ================= STICKY ORDER PROVISION CONSOLE (4 Cols) ================= */}
+        {/* ================= STICKY ORDER SUMMARY (4 Cols) ================= */}
         <aside id="provisioning-desk" className="lg:col-span-4">
-          <div className="sticky top-28 bg-[#0f1117] border border-zinc-800/90 rounded-3xl p-6 sm:p-7 space-y-6 shadow-2xl relative overflow-hidden">
+          <div className="sticky top-28 bg-[#0f131b] border border-white/[0.08] rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <span
                   className="text-[10px] font-mono tracking-widest uppercase"
                   style={{ color: brandColor }}
                 >
-                  Provisioning Desk
+                  Direct Checkout
                 </span>
                 <h3 className="font-serif text-2xl text-white">
                   Order Summary
                 </h3>
               </div>
-              <span className="rounded-full bg-zinc-900 border border-zinc-800 px-3 py-1 font-mono text-xs text-zinc-300">
+              <span className="rounded-full bg-[#090b10] border border-white/10 px-3 py-1 font-mono text-xs tabular-nums text-zinc-300">
                 {totalCount} {totalCount === 1 ? "item" : "items"}
               </span>
             </div>
@@ -2385,12 +2408,13 @@ export default function CustomerOrderingStorefront() {
                         ? { backgroundColor: brandColor, color: "#000" }
                         : undefined
                     }
-                    className={`rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${orderType === "pickup"
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${orderType === "pickup"
                         ? "font-bold shadow"
                         : "text-zinc-400 hover:text-white"
                       }`}
                   >
-                    🛍️ Pickup
+                    <ShoppingBag className="h-3 w-3" />
+                    <span>Pickup</span>
                   </button>
                 )}
                 {restaurant.features.delivery && (
@@ -2402,12 +2426,13 @@ export default function CustomerOrderingStorefront() {
                         ? { backgroundColor: brandColor, color: "#000" }
                         : undefined
                     }
-                    className={`rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${orderType === "delivery"
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${orderType === "delivery"
                         ? "font-bold shadow"
                         : "text-zinc-400 hover:text-white"
                       }`}
                   >
-                    🛵 Delivery
+                    <Truck className="h-3 w-3" />
+                    <span>Delivery</span>
                   </button>
                 )}
                 {restaurant.features.dineInQr && (
@@ -2419,22 +2444,23 @@ export default function CustomerOrderingStorefront() {
                         ? { backgroundColor: brandColor, color: "#000" }
                         : undefined
                     }
-                    className={`rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${orderType === "dine_in"
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${orderType === "dine_in"
                         ? "font-bold shadow"
                         : "text-zinc-400 hover:text-white"
                       }`}
                   >
-                    🍽️ Dine-In
+                    <UtensilsCrossed className="h-3 w-3" />
+                    <span>Dine-In</span>
                   </button>
                 )}
               </div>
 
               {/* Active Fulfillment Mode Info / Owner Instructions */}
-              <div className="rounded-xl border border-zinc-800/70 bg-zinc-950/60 px-3 py-2 text-[10px] text-zinc-400">
+              <div className="rounded-xl border border-white/[0.06] bg-[#090b10] px-3 py-2 text-[10px] text-zinc-400">
                 {orderType === "pickup" && (
                   <div className="flex flex-wrap items-center justify-between gap-1">
-                    <span>
-                      🛍️{" "}
+                    <span className="inline-flex items-center gap-1.5">
+                      <ShoppingBag className="h-3 w-3 shrink-0" style={{ color: brandColor }} />
                       {restaurant.features.pickupInstructions ||
                         (restaurant.features.curbsidePickup !== false
                           ? "In-store counter & curbside pickup available"
@@ -2448,13 +2474,13 @@ export default function CustomerOrderingStorefront() {
                 {orderType === "delivery" && (
                   <div className="space-y-0.5">
                     <div className="flex flex-wrap items-center justify-between gap-1">
-                      <span>
-                        🛵{" "}
+                      <span className="inline-flex items-center gap-1.5">
+                        <Truck className="h-3 w-3 shrink-0" style={{ color: brandColor }} />
                         {restaurant.features.deliveryInstructions ||
                           `Local delivery (${restaurant.features.deliveryRadiusMiles || 5
                           } mi radius)`}
                       </span>
-                      <span className="font-mono text-sky-400 font-semibold">
+                      <span className="font-mono text-sky-400 font-semibold tabular-nums">
                         ${restaurant.paymentConfig.deliveryFee.toFixed(2)} Fee
                         (Free ${restaurant.paymentConfig.freeDeliveryMin}+)
                       </span>
@@ -2463,8 +2489,8 @@ export default function CustomerOrderingStorefront() {
                 )}
                 {orderType === "dine_in" && (
                   <div className="flex flex-wrap items-center justify-between gap-1">
-                    <span>
-                      🍽️{" "}
+                    <span className="inline-flex items-center gap-1.5">
+                      <UtensilsCrossed className="h-3 w-3 shrink-0" style={{ color: brandColor }} />
                       {restaurant.features.dineInInstructions ||
                         "Order directly to your table via QR code"}
                     </span>
@@ -2508,14 +2534,15 @@ export default function CustomerOrderingStorefront() {
                       ? { backgroundColor: brandColor, color: "#000" }
                       : undefined
                   }
-                  className={`rounded-xl py-1.5 px-2 text-[10px] font-mono uppercase transition ${checkoutTiming === "asap"
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-xl py-1.5 px-2 text-[10px] font-mono uppercase transition ${checkoutTiming === "asap"
                       ? "font-bold shadow"
-                      : "bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800"
+                      : "bg-[#090b10] text-zinc-400 hover:text-white border border-white/[0.08]"
                     }`}
                 >
+                  <Zap className="h-3 w-3" />
                   {requiresAdvanceNotice
-                    ? "⏳ Earliest Ready"
-                    : `🔥 ASAP (~${restaurant.prepTimeMinutes}m)`}
+                    ? "Earliest Ready"
+                    : `ASAP (~${restaurant.prepTimeMinutes}m)`}
                 </button>
                 <button
                   type="button"
@@ -2534,12 +2561,13 @@ export default function CustomerOrderingStorefront() {
                       ? { backgroundColor: brandColor, color: "#000" }
                       : undefined
                   }
-                  className={`rounded-xl py-1.5 px-2 text-[10px] font-mono uppercase transition ${checkoutTiming === "scheduled"
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-xl py-1.5 px-2 text-[10px] font-mono uppercase transition ${checkoutTiming === "scheduled"
                       ? "font-bold shadow"
-                      : "bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800"
+                      : "bg-[#090b10] text-zinc-400 hover:text-white border border-white/[0.08]"
                     }`}
                 >
-                  📅 Pick Advance Date
+                  <Calendar className="h-3 w-3" />
+                  Pick Advance Date
                 </button>
               </div>
 
@@ -2990,18 +3018,24 @@ export default function CustomerOrderingStorefront() {
             </div>
 
             <p className="text-[11px] text-zinc-500 text-center leading-relaxed">
-              Instant SMS confirmation & kitchen tracking dispatched upon Stripe
-              or PayPal settlement.
+              Instant SMS confirmation &amp; kitchen tracking dispatched upon
+              Stripe, Square, Clover, or PayPal settlement.
             </p>
           </div>
         </aside>
       </main>
 
+      {/* ================= ABOUT US SECTION ================= */}
+      <StorefrontAboutSection
+        restaurant={restaurant}
+        brandColor={brandColor}
+      />
+
       {/* ================= STOREFRONT FOOTER ================= */}
       <StorefrontFooter restaurant={restaurant} brandColor={brandColor} />
 
       {/* ================= MOBILE STICKY BOTTOM CART & CHECKOUT BAR (lg:hidden) ================= */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800/90 bg-[#0b0c10]/95 px-3 py-2.5 backdrop-blur-xl lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#090b10]/95 px-3 py-2.5 backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-2.5">
           <button
             type="button"
@@ -3013,16 +3047,16 @@ export default function CustomerOrderingStorefront() {
             className="flex min-w-0 items-center gap-2.5 text-left"
           >
             <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-black shadow"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold tabular-nums text-black shadow"
               style={{ backgroundColor: brandColor }}
             >
               {totalCount}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-xs font-semibold text-white">
+              <div className="truncate text-xs font-semibold tabular-nums text-white">
                 {cart.length > 0
-                  ? `${totalCount} Selection${totalCount === 1 ? "" : "s"} • $${grandTotal.toFixed(2)}`
-                  : "Provisioning Manifest"}
+                  ? `${totalCount} Item${totalCount === 1 ? "" : "s"} • $${grandTotal.toFixed(2)}`
+                  : "Your Bag"}
               </div>
               <div className="truncate font-mono text-[10px] text-zinc-400">
                 {cart.length > 0

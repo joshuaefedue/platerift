@@ -3,11 +3,16 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  Activity,
   Building2,
   CheckCircle2,
   CreditCard,
+  Database,
   ExternalLink,
+  Eye,
+  EyeOff,
   Globe,
+  Layers,
   LayoutDashboard,
   Lock,
   LogOut,
@@ -15,9 +20,12 @@ import {
   Menu,
   MessageSquare,
   PauseCircle,
+  PhoneCall,
   PlayCircle,
+  Plug,
   Plus,
   RefreshCw,
+  Send,
   Settings2,
   ShieldCheck,
   ShoppingBag,
@@ -25,6 +33,8 @@ import {
   Store,
   Trash2,
   TrendingUp,
+  Truck,
+  Unlock,
   UserPlus,
   Users,
   UtensilsCrossed,
@@ -909,10 +919,10 @@ export default function SuperAdminDashboard() {
       .find((i) => i.id === adminView) || superAdminNavGroups[0].items[0];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="min-h-screen bg-[#090b10] text-slate-100 flex">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed inset-x-4 bottom-4 sm:inset-x-auto sm:bottom-6 sm:right-6 z-50 flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-slate-900/95 px-4 py-3 text-xs sm:px-5 sm:py-3.5 sm:text-sm font-medium text-emerald-300 shadow-2xl backdrop-blur-md">
+        <div className="fixed inset-x-4 bottom-4 sm:inset-x-auto sm:bottom-6 sm:right-6 z-50 flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-[#0f131b]/95 px-4 py-3 text-xs sm:px-5 sm:py-3.5 sm:text-sm font-medium text-emerald-300 shadow-2xl backdrop-blur-md">
           <Sparkles className="h-4 w-4 shrink-0 text-emerald-400" />
           <span>{toast}</span>
         </div>
@@ -922,43 +932,41 @@ export default function SuperAdminDashboard() {
       {mobileSidebarOpen && (
         <div
           onClick={() => setMobileSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm lg:hidden"
         />
       )}
 
       {/* Left Sidebar Navigation — Super Admin Console */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r border-slate-800/90 bg-slate-950 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r border-white/[0.08] bg-[#0c0f16]/95 backdrop-blur-xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Brand Identity Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-slate-800/80 px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] px-5 py-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/20">
               <UtensilsCrossed className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h1 className="truncate text-sm font-bold tracking-tight text-white">
-                  Platerift Cloud
-                </h1>
-              </div>
-              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-semibold text-orange-400 border border-orange-500/30">
-                <ShieldCheck className="h-3 w-3" /> Super Admin Console
+              <h1 className="truncate text-sm font-bold tracking-tight text-white">
+                Platerift Cloud
+              </h1>
+              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-400 border border-orange-500/30">
+                <ShieldCheck className="h-3 w-3" /> Super Admin
               </span>
             </div>
           </div>
           <button
             onClick={() => setMobileSidebarOpen(false)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-900 hover:text-white lg:hidden"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Primary Action CTA inside Sidebar */}
-        <div className="border-b border-slate-800/80 px-4 py-3.5">
+        <div className="border-b border-white/[0.08] px-4 py-3.5">
           <button
             onClick={() => {
               setShowCreateModal(true);
@@ -967,7 +975,7 @@ export default function SuperAdminDashboard() {
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3.5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-orange-500/20 hover:from-orange-600 hover:to-rose-700 transition"
           >
             <Plus className="h-4 w-4" />
-            Create & Setup Restaurant
+            New Restaurant Tenant
           </button>
         </div>
 
@@ -991,15 +999,15 @@ export default function SuperAdminDashboard() {
                       }}
                       className={`group flex w-full items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 text-left transition ${
                         isActive
-                          ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
-                          : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
+                          ? "border border-orange-500/30 bg-orange-500/15 text-orange-200 shadow-sm"
+                          : "border border-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-100"
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Icon
                           className={`h-4 w-4 shrink-0 ${
                             isActive
-                              ? "text-white"
+                              ? "text-orange-400"
                               : "text-slate-400 group-hover:text-slate-200"
                           }`}
                         />
@@ -1010,7 +1018,7 @@ export default function SuperAdminDashboard() {
                           <div
                             className={`truncate text-[10px] ${
                               isActive
-                                ? "text-orange-100/90"
+                                ? "text-orange-200/80"
                                 : "text-slate-500 group-hover:text-slate-400"
                             }`}
                           >
@@ -1020,16 +1028,16 @@ export default function SuperAdminDashboard() {
                       </div>
                       {item.badge !== undefined && (
                         <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
                             isActive
-                              ? "bg-white/20 text-white"
+                              ? "bg-orange-500/20 text-orange-200"
                               : item.badgeTone === "emerald"
                               ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
                               : item.badgeTone === "amber"
                               ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                               : item.badgeTone === "sky"
                               ? "bg-sky-500/15 text-sky-300 border border-sky-500/30"
-                              : "bg-slate-800 text-slate-300"
+                              : "bg-white/[0.06] text-slate-300"
                           }`}
                         >
                           {item.badge}
@@ -1046,9 +1054,9 @@ export default function SuperAdminDashboard() {
           <div>
             <div className="mb-2 flex items-center justify-between px-3">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Restaurant Portals ({restaurants.length})
+                Tenants ({restaurants.length})
               </span>
-              <span className="text-[10px] text-slate-500">
+              <span className="text-[10px] tabular-nums text-slate-500">
                 {verifiedDomainsCount}/{restaurants.length} SSL
               </span>
             </div>
@@ -1056,7 +1064,7 @@ export default function SuperAdminDashboard() {
               {restaurants.map((tenant) => (
                 <div
                   key={tenant.id}
-                  className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-2.5 transition hover:border-slate-700"
+                  className="rounded-xl border border-white/[0.07] bg-[#090b10]/90 p-2.5 transition hover:border-white/[0.15]"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
@@ -1090,14 +1098,14 @@ export default function SuperAdminDashboard() {
                       href={`/dashboard/${encodeURIComponent(
                         tenant.customDomain
                       )}`}
-                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-2 py-1 text-[10px] font-semibold text-slate-300 hover:border-orange-500/40 hover:text-white transition"
+                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-[#0f131b] px-2 py-1 text-[10px] font-semibold text-slate-300 hover:border-orange-500/40 hover:text-white transition"
                     >
                       <LayoutDashboard className="h-3 w-3 text-orange-400" />
-                      Owner Portal
+                      Portal
                     </Link>
                     <Link
                       href={`/store/${encodeURIComponent(tenant.customDomain)}`}
-                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-2 py-1 text-[10px] font-semibold text-slate-300 hover:border-emerald-500/40 hover:text-white transition"
+                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-[#0f131b] px-2 py-1 text-[10px] font-semibold text-slate-300 hover:border-emerald-500/40 hover:text-white transition"
                     >
                       <ExternalLink className="h-3 w-3 text-emerald-400" />
                       Storefront
@@ -1110,9 +1118,9 @@ export default function SuperAdminDashboard() {
         </nav>
 
         {/* Sidebar Footer: Platform Session, Status & Refresh */}
-        <div className="border-t border-slate-800/80 p-3.5 space-y-2.5 bg-slate-950">
+        <div className="border-t border-white/[0.08] p-3.5 space-y-2 bg-[#090b10]/90">
           {platformSession ? (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 space-y-2">
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
@@ -1129,7 +1137,7 @@ export default function SuperAdminDashboard() {
                 <button
                   type="button"
                   onClick={handleAdminSignOut}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-semibold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition shrink-0"
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-[#090b10] px-2 py-1 text-[10px] font-semibold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition shrink-0"
                   title="Sign Out"
                 >
                   <LogOut className="h-3 w-3" />
@@ -1150,12 +1158,12 @@ export default function SuperAdminDashboard() {
                 <Lock className="h-3.5 w-3.5" />
                 Platform Admin Sign In
               </span>
-              <span className="rounded bg-slate-950/60 px-1.5 py-0.5 font-mono text-[9px] uppercase text-slate-300">
+              <span className="rounded bg-[#090b10]/80 px-1.5 py-0.5 font-mono text-[9px] uppercase text-slate-300">
                 {strictAuthEnforced ? "Required" : "Demo"}
               </span>
             </button>
           )}
-          <div className="flex items-center justify-between rounded-xl border border-slate-800/90 bg-slate-900/70 px-3 py-2 text-[11px]">
+          <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#0f131b] px-3 py-2 text-[11px]">
             <div className="flex items-center gap-2 min-w-0">
               <span
                 className={`h-2 w-2 shrink-0 rounded-full ${
@@ -1175,10 +1183,10 @@ export default function SuperAdminDashboard() {
           </div>
           <button
             onClick={fetchRestaurants}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#0f131b] px-3 py-2 text-xs font-medium text-slate-300 hover:border-white/20 hover:text-white transition"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh Platform Telemetry
+            Refresh Telemetry
           </button>
         </div>
       </aside>
@@ -1186,12 +1194,12 @@ export default function SuperAdminDashboard() {
       {/* Right Column: Contextual Header + Main Workspace */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Compact Top Bar */}
-        <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+        <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[#090b10]/90 backdrop-blur-md">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-3.5">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <button
                 onClick={() => setMobileSidebarOpen(true)}
-                className="shrink-0 rounded-xl border border-slate-800 bg-slate-900 p-2 text-slate-300 hover:bg-slate-800 hover:text-white lg:hidden"
+                className="shrink-0 rounded-xl border border-white/10 bg-[#0f131b] p-2 text-slate-300 hover:bg-white/10 hover:text-white lg:hidden"
                 aria-label="Open Super Admin Sidebar"
               >
                 <Menu className="h-5 w-5" />
@@ -1201,13 +1209,13 @@ export default function SuperAdminDashboard() {
                   <h2 className="truncate text-sm sm:text-base font-bold tracking-tight text-white">
                     {activeNavItem.label}
                   </h2>
-                  <span className="hidden sm:inline-flex rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-medium text-slate-400 border border-slate-800">
+                  <span className="hidden sm:inline-flex rounded-full bg-[#0f131b] px-2.5 py-0.5 text-[11px] font-medium text-slate-400 border border-white/[0.08]">
                     {activeNavItem.subtitle}
                   </span>
                 </div>
                 <p className="truncate text-xs text-slate-400">
-                  Multi-Tenant Restaurant Provisioning, Custom Domains &
-                  Merchant Control Center
+                  Multi-Tenant Provisioning, Custom Domains &amp; Platform
+                  Operations
                 </p>
               </div>
             </div>
@@ -1226,7 +1234,7 @@ export default function SuperAdminDashboard() {
                   <button
                     type="button"
                     onClick={handleAdminSignOut}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition"
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-[#090b10] px-2 py-0.5 text-[10px] font-semibold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition"
                   >
                     <LogOut className="h-3 w-3" />
                     Sign Out
@@ -1239,46 +1247,39 @@ export default function SuperAdminDashboard() {
                     setAdminLoginError(null);
                     setShowAdminLoginModal(true);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/40 bg-orange-500/15 px-3 py-2 text-xs font-semibold text-orange-300 hover:bg-orange-500/25 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/35 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-orange-300 hover:bg-orange-500/20 transition"
                 >
                   <Lock className="h-3.5 w-3.5" />
                   <span>Admin Sign In</span>
                 </button>
               )}
-              <div className="hidden md:flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-xs text-slate-300">
+              <div className="hidden md:flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0f131b] px-3 py-1.5 text-xs text-slate-300 tabular-nums">
                 <Globe className="h-3.5 w-3.5 text-sky-400" />
                 <span>
                   <strong className="text-white">{verifiedDomainsCount}</strong>/
-                  {restaurants.length} Custom Domains Active
+                  {restaurants.length} Domains Active
                 </span>
               </div>
               <Link
                 href="/"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-2 sm:px-3 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#0f131b] px-2.5 py-2 sm:px-3 text-xs font-medium text-slate-300 hover:border-white/20 hover:text-white transition"
               >
                 <Globe className="h-3.5 w-3.5 text-orange-400" />
                 <span className="hidden sm:inline">Marketing Site</span>
               </Link>
               <button
-                onClick={fetchRestaurants}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-2 sm:px-3 text-xs font-medium text-slate-300 hover:bg-slate-800 transition"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
-              <button
                 onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 sm:px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-orange-500/25 hover:from-orange-600 hover:to-rose-700 transition"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 sm:px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-orange-500/25 hover:from-orange-600 hover:to-rose-700 transition"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Create & Setup New Restaurant</span>
-                <span className="sm:hidden">New Restaurant</span>
+                <span className="hidden sm:inline">New Restaurant</span>
+                <span className="sm:hidden">New</span>
               </button>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 space-y-6 sm:space-y-8">
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-7 space-y-6">
         {authRequiredPrompt && !platformSession && (
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-5 py-4">
             <div className="flex items-center gap-3 min-w-0">
@@ -1305,95 +1306,79 @@ export default function SuperAdminDashboard() {
             </button>
           </div>
         )}
-        {/* Hero Architecture Banner */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-orange-950/40 p-5 sm:p-6 md:p-8">
-          <div className="max-w-3xl space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-medium text-orange-300">
-              <Sparkles className="h-3.5 w-3.5" />
-              All-in-One Multi-Tenant Restaurant SaaS Engine
-            </div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white">
-              Onboard restaurants in 60 seconds, connect their custom domains,
-              and empower them to take orders directly.
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Every restaurant gets its own isolated **Owner Portal** and
-              custom-branded **Customer Ordering Storefront** connected to their
-              own domain name, their own **Stripe & PayPal** accounts, **Menu
-              Builder** with 86/unavailable toggles, **Hourly/Daily Order
-              Limits**, **Day/Time Blackout Schedules**, **Customer CRM**,
-              automated **Twilio SMS Notifications**, and **Email Marketing
-              Campaigns**.
-            </p>
-          </div>
 
+        {/* Platform KPIs & Turso Cloud Sync Bar (Primary Overview on Tenants View) */}
+        {adminView === "tenants" && (
+        <div className="space-y-4">
           {/* KPI Metric Cards */}
-          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-            <div className="rounded-xl border border-slate-800/90 bg-slate-950/60 p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4 sm:p-5">
               <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
                 <span>Active Restaurant Tenants</span>
                 <Building2 className="h-4 w-4 text-orange-400" />
               </div>
-              <p className="mt-2 text-2xl font-bold text-white">
+              <p className="mt-2 text-2xl font-bold tabular-nums text-white">
                 {restaurants.length}
               </p>
-              <p className="mt-1 text-xs text-emerald-400">
+              <p className="mt-1 text-xs text-emerald-400 tabular-nums">
                 {verifiedDomainsCount} custom domains SSL active
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-800/90 bg-slate-950/60 p-4">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4 sm:p-5">
               <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
                 <span>Direct Merchant Volume</span>
                 <TrendingUp className="h-4 w-4 text-emerald-400" />
               </div>
-              <p className="mt-2 text-2xl font-bold text-white">
+              <p className="mt-2 text-2xl font-bold tabular-nums text-white">
                 ${totalPlatformRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                100% routed to tenant Stripe & PayPal
+                100% routed to tenant accounts
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-800/90 bg-slate-950/60 p-4">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4 sm:p-5">
               <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
                 <span>Total Orders Processed</span>
                 <ShoppingBag className="h-4 w-4 text-sky-400" />
               </div>
-              <p className="mt-2 text-2xl font-bold text-white">
+              <p className="mt-2 text-2xl font-bold tabular-nums text-white">
                 {totalOrdersCount}
               </p>
               <p className="mt-1 text-xs text-sky-400">
-                Real-time SMS order updates active
+                Real-time SMS updates active
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-800/90 bg-slate-950/60 p-4">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-4 sm:p-5">
               <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
                 <span>CRM Customers Managed</span>
                 <Users className="h-4 w-4 text-purple-400" />
               </div>
-              <p className="mt-2 text-2xl font-bold text-white">
+              <p className="mt-2 text-2xl font-bold tabular-nums text-white">
                 {totalCustomersCount}
               </p>
               <p className="mt-1 text-xs text-purple-400">
-                Segmented for SMS & Email blasts
+                Segmented for SMS &amp; email blasts
               </p>
             </div>
           </div>
 
           {/* Turso Cloud Database Live Sync Bar */}
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/[0.08] bg-[#0f131b] px-4 py-3.5">
             <div className="flex items-center gap-3 min-w-0">
-              <span
-                className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                  tursoStatus?.connected
-                    ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]"
-                    : tursoStatus?.configured
-                    ? "bg-amber-400"
-                    : "bg-slate-500"
-                }`}
-              />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-[#090b10]">
+                <Database
+                  className={`h-4 w-4 ${
+                    tursoStatus?.connected
+                      ? "text-emerald-400"
+                      : tursoStatus?.configured
+                      ? "text-amber-400"
+                      : "text-slate-500"
+                  }`}
+                />
+              </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold text-white">
@@ -1402,8 +1387,8 @@ export default function SuperAdminDashboard() {
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                       tursoStatus?.connected
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                        : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
                     }`}
                   >
                     {tursoStatus?.connected
@@ -1411,10 +1396,14 @@ export default function SuperAdminDashboard() {
                       : "WAITING FOR TURSO ENV VARS"}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
                   {tursoStatus?.connected ? (
                     <>
-                      Host: <span className="font-mono text-slate-300">{tursoStatus.tursoHost}</span> (via <code className="text-emerald-300">{tursoStatus.envVarDetected}</code>) • Cloud Rows:{" "}
+                      Host:{" "}
+                      <span className="font-mono text-slate-300">
+                        {tursoStatus.tursoHost}
+                      </span>{" "}
+                      ({tursoStatus.envVarDetected}) • Cloud Rows:{" "}
                       <strong className="text-emerald-300">
                         {tursoStatus.tursoCounts?.restaurants ?? 0}
                       </strong>{" "}
@@ -1430,14 +1419,21 @@ export default function SuperAdminDashboard() {
                     </>
                   ) : tursoStatus?.configured && tursoStatus?.error ? (
                     <span className="text-rose-300">
-                      ⚠️ Turso URL found (<span className="font-mono">{tursoStatus.tursoHost}</span> via <code>{tursoStatus.envVarDetected}</code>), but connection failed: <strong>{tursoStatus.error}</strong>. Check your <code>TURSO_AUTH_TOKEN</code> in Vercel Settings.
+                      Turso URL found (<span className="font-mono">{tursoStatus.tursoHost}</span> via <code>{tursoStatus.envVarDetected}</code>), but connection failed: <strong>{tursoStatus.error}</strong>. Check <code>TURSO_AUTH_TOKEN</code>.
                     </span>
                   ) : (
                     <>
-                      Detected Env Vars: <code className="text-amber-300">{tursoStatus?.envVarDetected || "none"}</code>. Ensure{" "}
-                      <code className="text-orange-300">TURSO_DATABASE_URL</code> &amp;{" "}
-                      <code className="text-orange-300">TURSO_AUTH_TOKEN</code> are set in Vercel Environment Variables (and redeployed), then click{" "}
-                      <strong className="text-white">Sync All Data with Turso</strong>.
+                      Detected Env Vars:{" "}
+                      <code className="text-amber-300">
+                        {tursoStatus?.envVarDetected || "none"}
+                      </code>
+                      . Set{" "}
+                      <code className="text-orange-300">
+                        TURSO_DATABASE_URL
+                      </code>{" "}
+                      &amp;{" "}
+                      <code className="text-orange-300">TURSO_AUTH_TOKEN</code>{" "}
+                      in Vercel settings, then sync.
                     </>
                   )}
                 </p>
@@ -1449,18 +1445,18 @@ export default function SuperAdminDashboard() {
                 type="button"
                 disabled={syncingTurso}
                 onClick={() => handleTursoSync("bidirectional")}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 transition"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 ${syncingTurso ? "animate-spin" : ""}`}
                 />
-                <span>{syncingTurso ? "Syncing..." : "Sync All Data with Turso"}</span>
+                <span>{syncingTurso ? "Syncing..." : "Sync All Data"}</span>
               </button>
               <button
                 type="button"
                 disabled={syncingTurso}
                 onClick={() => handleTursoSync("push")}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50 transition"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs font-semibold text-slate-200 hover:border-white/20 disabled:opacity-50 transition"
               >
                 <span>Push Local → Turso</span>
               </button>
@@ -1468,25 +1464,48 @@ export default function SuperAdminDashboard() {
                 type="button"
                 disabled={syncingTurso}
                 onClick={() => handleTursoSync("pull")}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50 transition"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs font-semibold text-slate-200 hover:border-white/20 disabled:opacity-50 transition"
               >
                 <span>Pull Turso → Local</span>
               </button>
             </div>
           </div>
         </div>
+        )}
+
+        {/* Slim Turso Warning Strip on Secondary Views when Disconnected / Errored */}
+        {adminView !== "tenants" && tursoStatus && !tursoStatus.connected && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-950/20 px-4 py-2.5 text-xs text-amber-200">
+            <div className="flex items-center gap-2 min-w-0">
+              <Database className="h-4 w-4 shrink-0 text-amber-400" />
+              <span className="truncate">
+                {tursoStatus.error
+                  ? `Turso Sync Error: ${tursoStatus.error}`
+                  : "Turso Cloud Sync is awaiting environment configuration."}
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={syncingTurso}
+              onClick={() => handleTursoSync("bidirectional")}
+              className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/25 disabled:opacity-50 transition shrink-0"
+            >
+              {syncingTurso ? "Syncing..." : "Retry Sync"}
+            </button>
+          </div>
+        )}
 
         {/* VIEW 1: Restaurant Tenants Grid */}
         {adminView === "tenants" && (
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-lg font-bold tracking-tight text-white">
                 Managed Restaurant Tenants ({restaurants.length})
               </h3>
               <p className="text-xs text-slate-400">
-                Configure unique requirements, verify custom domains, or launch
-                any restaurant&apos;s Owner Portal or Customer Storefront.
+                Configure tenant policies, verify custom domains, or launch any
+                restaurant&apos;s Owner Portal or Customer Storefront.
               </p>
             </div>
           </div>
@@ -1496,7 +1515,7 @@ export default function SuperAdminDashboard() {
               {[1, 2, 3].map((n) => (
                 <div
                   key={n}
-                  className="h-96 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/50 p-6"
+                  className="h-96 animate-pulse rounded-2xl border border-white/[0.08] bg-[#0f131b] p-6"
                 />
               ))}
             </div>
@@ -1505,24 +1524,24 @@ export default function SuperAdminDashboard() {
               {restaurants.map((tenant) => (
                 <div
                   key={tenant.id}
-                  className="group flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-xl transition hover:border-slate-700"
+                  className="group flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#0f131b] overflow-hidden shadow-xl transition hover:border-white/[0.16]"
                 >
                   <div>
                     {/* Tenant Banner Header */}
-                    <div className="relative h-32 w-full overflow-hidden bg-slate-800">
+                    <div className="relative h-32 w-full overflow-hidden bg-slate-900">
                       <img
                         src={tenant.heroBannerUrl}
                         alt={tenant.name}
                         className="h-full w-full object-cover opacity-65 transition duration-500 group-hover:scale-105"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0f131b] via-[#0f131b]/45 to-transparent" />
 
                       <div className="absolute top-3 left-3 flex items-center gap-2">
-                        <span className="rounded-full bg-slate-950/85 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-md border border-slate-700">
+                        <span className="rounded-full bg-[#090b10]/85 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur-md border border-white/15">
                           {tenant.plan} plan
                         </span>
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold backdrop-blur-md ${
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold backdrop-blur-md ${
                             tenant.availability.allowed
                               ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
                               : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
@@ -1542,19 +1561,19 @@ export default function SuperAdminDashboard() {
                       </div>
 
                       <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <span
-                            className="flex h-11 w-11 items-center justify-center rounded-xl text-2xl shadow-md border border-white/15"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl shadow-md border border-white/15"
                             style={{ backgroundColor: tenant.primaryColor }}
                           >
                             {tenant.logoEmoji}
                           </span>
-                          <div>
-                            <h4 className="font-bold text-white text-base leading-tight">
+                          <div className="min-w-0">
+                            <h4 className="truncate font-bold text-white text-base leading-tight">
                               {tenant.name}
                             </h4>
-                            <p className="text-xs text-slate-300">
-                              {tenant.cuisine} • Owner: {tenant.ownerName}
+                            <p className="truncate text-xs text-slate-300">
+                              {tenant.cuisine} • {tenant.ownerName}
                             </p>
                           </div>
                         </div>
@@ -1562,9 +1581,9 @@ export default function SuperAdminDashboard() {
                     </div>
 
                     {/* Custom Domain Bar */}
-                    <div className="border-b border-slate-800/80 bg-slate-950/60 px-4 py-3 flex items-center justify-between gap-2">
+                    <div className="border-y border-white/[0.06] bg-[#090b10]/70 px-4 py-2.5 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Globe className="h-4 w-4 shrink-0 text-sky-400" />
+                        <Globe className="h-3.5 w-3.5 shrink-0 text-sky-400" />
                         <div className="truncate">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-mono font-medium text-sky-300 truncate">
@@ -1572,34 +1591,31 @@ export default function SuperAdminDashboard() {
                             </span>
                             {tenant.domainVerified ? (
                               <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
-                                <Lock className="h-2.5 w-2.5" /> SSL Active
+                                <Lock className="h-2.5 w-2.5" /> SSL
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
-                                Pending DNS
+                                DNS
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-500 truncate">
-                            Fallback: {tenant.subdomain}
-                          </p>
                         </div>
                       </div>
 
                       <button
                         onClick={() => setDnsModalTenant(tenant)}
-                        className="shrink-0 rounded-lg border border-slate-700 bg-slate-800/90 px-2.5 py-1 text-xs font-medium text-slate-200 hover:bg-slate-700 transition"
+                        className="shrink-0 rounded-lg border border-white/10 bg-[#0f131b] px-2.5 py-1 text-[11px] font-medium text-slate-200 hover:border-white/20 transition"
                       >
                         DNS / SSL
                       </button>
                     </div>
 
-                    {/* Body Details */}
-                    <div className="p-4 space-y-4">
-                      {/* Custom Requirements Summary */}
-                      <div className="rounded-xl border border-slate-800/90 bg-slate-950/50 p-3">
-                        <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                          <span>Unique Tenant Setup & Requirements</span>
+                    {/* Streamlined Body Sections (Hairline Dividers) */}
+                    <div className="divide-y divide-white/[0.06] px-4">
+                      {/* Tenant Setup & Requirements */}
+                      <div className="py-3.5">
+                        <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                          <span>Setup &amp; Limits</span>
                           <button
                             onClick={() => setCustomizeTenant(tenant)}
                             className="text-orange-400 hover:underline flex items-center gap-1"
@@ -1607,45 +1623,45 @@ export default function SuperAdminDashboard() {
                             <Settings2 className="h-3 w-3" /> Customize
                           </button>
                         </div>
-                        <p className="mt-1.5 text-xs text-slate-300 line-clamp-2">
+                        <p className="mt-1 text-xs text-slate-300 line-clamp-2">
                           {tenant.customRequirementNotes ||
                             "Standard online pickup & delivery configuration."}
                         </p>
-                        <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        <div className="mt-2 flex flex-wrap gap-1.5">
                           {tenant.features.pickup && (
-                            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">
+                            <span className="rounded-md bg-white/[0.05] px-2 py-0.5 text-[10px] text-slate-300">
                               Pickup
                             </span>
                           )}
                           {tenant.features.delivery && (
-                            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">
+                            <span className="rounded-md bg-white/[0.05] px-2 py-0.5 text-[10px] text-slate-300">
                               Delivery
                             </span>
                           )}
                           {tenant.features.dineInQr && (
-                            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">
-                              QR Table Order
+                            <span className="rounded-md bg-white/[0.05] px-2 py-0.5 text-[10px] text-slate-300">
+                              QR Dine-In
                             </span>
                           )}
                           {tenant.features.loyaltyProgram && (
-                            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">
-                              Loyalty CRM
+                            <span className="rounded-md bg-white/[0.05] px-2 py-0.5 text-[10px] text-slate-300">
+                              Loyalty
                             </span>
                           )}
-                          <span className="rounded-md bg-orange-500/15 text-orange-300 px-2 py-0.5 text-[11px]">
-                            Max {tenant.maxOrdersPerHour} orders/hr
+                          <span className="rounded-md bg-orange-500/15 text-orange-300 px-2 py-0.5 text-[10px] tabular-nums">
+                            {tenant.maxOrdersPerHour}/hr max
                           </span>
                         </div>
                       </div>
 
-                      {/* Quick Super Admin Customer Branding & Layout Switcher */}
-                      <div className="rounded-xl border border-slate-800/90 bg-slate-950/60 p-3 space-y-2.5">
+                      {/* Quick Branding & Layout Switcher */}
+                      <div className="py-3.5 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                            Customer Storefront Layout & Brand
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                            Storefront Theme &amp; Accent
                           </span>
                           <span
-                            className="h-3.5 w-3.5 rounded-full border border-white/20"
+                            className="h-3 w-3 rounded-full border border-white/20"
                             style={{ backgroundColor: tenant.primaryColor }}
                           />
                         </div>
@@ -1657,24 +1673,24 @@ export default function SuperAdminDashboard() {
                                 .value as RestaurantTenant["layoutStyle"],
                             })
                           }
-                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-white focus:border-orange-500 focus:outline-none"
+                          className="w-full rounded-lg border border-white/10 bg-[#090b10] px-2.5 py-1.5 text-xs text-white focus:border-orange-500/60 focus:outline-none"
                         >
                           <option value="aura-luxury">
-                            ✨ AURA Bespoke Gastronomy (Banquet + Degustation)
+                            AURA Bespoke Gastronomy (Banquet + Degustation)
                           </option>
                           <option value="modern-grid">
-                            🖼️ Visual Banquet Cards Grid
+                            Visual Banquet Cards Grid
                           </option>
                           <option value="editorial-list">
-                            📜 Editorial Degustation List
+                            Editorial Degustation List
                           </option>
                           <option value="compact-bistro">
-                            ⚡ Fast-Casual Express Bistro
+                            Fast-Casual Express Bistro
                           </option>
                         </select>
-                        <div className="flex items-center justify-between gap-1.5 pt-0.5">
+                        <div className="flex items-center justify-between gap-1.5">
                           <span className="text-[11px] text-slate-400">
-                            Brand Accent:
+                            Accent:
                           </span>
                           <div className="flex items-center gap-1.5">
                             {[
@@ -1693,7 +1709,7 @@ export default function SuperAdminDashboard() {
                                     primaryColor: sw.hex,
                                   })
                                 }
-                                className={`h-5 w-5 rounded-full border transition ${
+                                className={`h-4 w-4 rounded-full border transition ${
                                   tenant.primaryColor.toLowerCase() === sw.hex
                                     ? "scale-110 border-white ring-2 ring-white/40"
                                     : "border-white/20 opacity-75 hover:opacity-100"
@@ -1710,45 +1726,55 @@ export default function SuperAdminDashboard() {
                                 })
                               }
                               title="Custom Brand Hex Color"
-                              className="h-5 w-6 cursor-pointer rounded border border-slate-700 bg-slate-900"
+                              className="h-5 w-6 cursor-pointer rounded border border-white/10 bg-[#090b10]"
                             />
                           </div>
                         </div>
                       </div>
 
                       {/* Gateways & Metrics */}
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="rounded-lg border border-slate-800/80 bg-slate-950/40 p-2">
-                          <p className="text-[11px] text-slate-400">Menu</p>
-                          <p className="text-sm font-bold text-white">
+                      <div className="grid grid-cols-3 gap-2 py-3 text-center">
+                        <div className="rounded-lg bg-[#090b10]/70 p-2">
+                          <p className="text-[10px] text-slate-400">Menu</p>
+                          <p className="text-xs sm:text-sm font-bold tabular-nums text-white">
                             {tenant.stats.menuItemCount} items
                           </p>
                           {tenant.stats.unavailableItemCount > 0 && (
-                            <p className="text-[10px] text-rose-400">
-                              {tenant.stats.unavailableItemCount} 86&apos;d
+                            <p className="text-[10px] text-rose-400 tabular-nums">
+                              {tenant.stats.unavailableItemCount} out
                             </p>
                           )}
                         </div>
-                        <div className="rounded-lg border border-slate-800/80 bg-slate-950/40 p-2">
-                          <p className="text-[11px] text-slate-400">Orders</p>
-                          <p className="text-sm font-bold text-white">
+                        <div className="rounded-lg bg-[#090b10]/70 p-2">
+                          <p className="text-[10px] text-slate-400">Orders</p>
+                          <p className="text-xs sm:text-sm font-bold tabular-nums text-white">
                             {tenant.stats.totalOrders}
                           </p>
-                          <p className="text-[10px] text-emerald-400">
+                          <p className="text-[10px] text-emerald-400 tabular-nums">
                             ${tenant.stats.totalRevenue.toFixed(0)} rev
                           </p>
                         </div>
-                        <div className="rounded-lg border border-slate-800/80 bg-slate-950/40 p-2">
-                          <p className="text-[11px] text-slate-400">Gateways</p>
-                          <div className="mt-1 flex items-center justify-center gap-1">
+                        <div className="rounded-lg bg-[#090b10]/70 p-2">
+                          <p className="text-[10px] text-slate-400">Gateways</p>
+                          <div className="mt-1 flex flex-wrap items-center justify-center gap-1">
                             {tenant.paymentConfig.stripe.enabled && (
-                              <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-300">
+                              <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-300">
                                 Stripe
                               </span>
                             )}
                             {tenant.paymentConfig.paypal.enabled && (
-                              <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300">
+                              <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-sky-300">
                                 PayPal
+                              </span>
+                            )}
+                            {tenant.integrationsConfig?.square?.enabled && (
+                              <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-cyan-300">
+                                Square
+                              </span>
+                            )}
+                            {tenant.integrationsConfig?.clover?.enabled && (
+                              <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-300">
+                                Clover
                               </span>
                             )}
                           </div>
@@ -1758,13 +1784,13 @@ export default function SuperAdminDashboard() {
                   </div>
 
                   {/* Action Footer */}
-                  <div className="border-t border-slate-800 bg-slate-950/80 p-4 space-y-2.5">
-                    <div className="grid grid-cols-2 gap-2.5">
+                  <div className="border-t border-white/[0.08] bg-[#090b10]/85 p-4 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <Link
                         href={`/dashboard/${encodeURIComponent(
                           tenant.customDomain
                         )}`}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2.5 text-xs font-semibold text-white shadow hover:bg-orange-600 transition"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-2 text-xs font-semibold text-white shadow hover:from-orange-600 hover:to-rose-700 transition"
                       >
                         <LayoutDashboard className="h-3.5 w-3.5" />
                         Owner Portal
@@ -1773,14 +1799,14 @@ export default function SuperAdminDashboard() {
                         href={`/store/${encodeURIComponent(
                           tenant.customDomain
                         )}`}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-xs font-semibold text-white hover:bg-slate-700 transition"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#0f131b] px-3 py-2 text-xs font-semibold text-white hover:border-white/20 transition"
                       >
-                        <Store className="h-3.5 w-3.5" />
-                        Live Storefront
+                        <Store className="h-3.5 w-3.5 text-emerald-400" />
+                        Storefront
                       </Link>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 text-xs">
+                    <div className="flex items-center justify-between pt-1 text-[11px]">
                       <Link
                         href={`/?domain=${encodeURIComponent(
                           tenant.customDomain
@@ -1788,7 +1814,7 @@ export default function SuperAdminDashboard() {
                         className="inline-flex items-center gap-1 text-slate-400 hover:text-sky-400 transition"
                       >
                         <ExternalLink className="h-3 w-3" />
-                        Test Custom Domain Route
+                        Test Custom Domain
                       </Link>
 
                       <button
@@ -1802,12 +1828,10 @@ export default function SuperAdminDashboard() {
                         {tenant.orderingEnabled ? (
                           <>
                             <PauseCircle className="h-3.5 w-3.5" /> Pause
-                            Ordering
                           </>
                         ) : (
                           <>
                             <PlayCircle className="h-3.5 w-3.5" /> Resume
-                            Ordering
                           </>
                         )}
                       </button>
@@ -1827,7 +1851,7 @@ export default function SuperAdminDashboard() {
               {/* Left Column: Create Platform Admin or Restaurant Staff User */}
               <form
                 onSubmit={handleCreateUser}
-                className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4 h-fit"
+                className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-6 space-y-4 h-fit"
               >
                 <div className="flex items-center gap-2.5 border-b border-slate-800 pb-3">
                   <UserPlus className="h-5 w-5 text-orange-400" />
@@ -2080,11 +2104,12 @@ export default function SuperAdminDashboard() {
                                 {u.status}
                               </span>
                               {u.scope === "platform" ? (
-                                <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-orange-300">
-                                  🛡️ SaaS Platform HQ
+                                <span className="inline-flex items-center gap-1 rounded bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-orange-300">
+                                  <ShieldCheck className="h-3 w-3" />
+                                  SaaS Platform HQ
                                 </span>
                               ) : (
-                                <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-sky-300">
+                                <span className="rounded bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-sky-300">
                                   {assignedTenant
                                     ? `${assignedTenant.logoEmoji} ${assignedTenant.name}`
                                     : "Restaurant Staff"}
@@ -2239,7 +2264,7 @@ export default function SuperAdminDashboard() {
               {/* Left Column (7 Cols): Super Admin Master Twilio Credentials & Global Order Alert Rules */}
               <form
                 onSubmit={handleSavePlatformTwilio}
-                className="lg:col-span-7 rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-5"
+                className="lg:col-span-7 rounded-2xl border border-white/[0.08] bg-[#0f131b] p-6 space-y-5"
               >
                 <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                   <div>
@@ -2494,9 +2519,10 @@ export default function SuperAdminDashboard() {
                             onClick={() =>
                               handleTestOwnerOrderAlert(tenant.id, tenant.name)
                             }
-                            className="rounded-lg border border-orange-500/40 bg-orange-500/15 px-2.5 py-1 text-[10px] font-semibold text-orange-300 hover:bg-orange-500/25"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/35 bg-orange-500/10 px-2.5 py-1 text-[10px] font-semibold text-orange-300 hover:bg-orange-500/20 transition"
                           >
-                            📲 Test Owner Order Alert
+                            <Send className="h-3 w-3" />
+                            Test Owner Order Alert
                           </button>
                         </div>
                       </div>
@@ -2560,29 +2586,30 @@ export default function SuperAdminDashboard() {
 
         {/* VIEW 4: Super Admin Master Integrations Setup & Owner Feature Release */}
         {adminView === "integrations" && platformIntegrations && (
-          <section className="space-y-8">
+          <section className="space-y-6">
             {/* Master Workflow Header Banner */}
-            <div className="rounded-3xl border border-orange-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-orange-950/20 p-6 space-y-5">
+            <div className="rounded-2xl border border-orange-500/25 bg-gradient-to-br from-[#0f131b] via-[#0f131b] to-orange-950/15 p-6 space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1.5 max-w-3xl">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/20 border border-orange-500/40 px-3 py-1 text-xs font-bold text-orange-300">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/15 border border-orange-500/35 px-3 py-1 text-[11px] font-semibold text-orange-300">
                     <ShieldCheck className="h-3.5 w-3.5" />
-                    Step 1: Platform Admin Setup → Step 2: Available to Restaurant Owners
+                    Step 1: Platform Admin Setup → Step 2: Release to Owners
                   </span>
-                  <h3 className="text-xl font-black text-white">
-                    🔌 Master Platform Integrations & Tenant Feature Release
+                  <h3 className="flex items-center gap-2 text-xl font-bold tracking-tight text-white">
+                    <Plug className="h-5 w-5 text-orange-400" />
+                    <span>Master Platform Integrations &amp; Entitlements</span>
                   </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    Configure your platform-level partner credentials and webhooks
-                    for <strong>1. DoorDash Drive API</strong>,{" "}
-                    <strong>2. Square POS</strong>, <strong>3. Clover POS</strong>
-                    , and <strong>4. Vapi Voice AI</strong> below. Once you mark
-                    an integration as{" "}
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Configure platform-level partner credentials and webhooks for{" "}
+                    <strong className="text-slate-200">DoorDash Drive</strong>,{" "}
+                    <strong className="text-slate-200">Square POS</strong>,{" "}
+                    <strong className="text-slate-200">Clover POS</strong>, and{" "}
+                    <strong className="text-slate-200">Vapi Voice AI</strong>.
+                    Mark each integration as{" "}
                     <strong className="text-emerald-300">
-                      Setup Completed &amp; Available to Owners
+                      Setup Completed &amp; Release to Owners
                     </strong>{" "}
-                    (and enable the tenant switch below), it unlocks inside that
-                    restaurant owner&apos;s dashboard!
+                    to unlock it inside tenant portals.
                   </p>
                 </div>
 
@@ -2590,15 +2617,15 @@ export default function SuperAdminDashboard() {
                   <button
                     type="button"
                     onClick={handleFinishAndPublishAllIntegrations}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-xs font-black text-slate-950 shadow-lg hover:brightness-110"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-xs font-bold text-slate-950 shadow-lg hover:brightness-110 transition"
                   >
                     <CheckCircle2 className="h-4 w-4" />
-                    Complete &amp; Unlock All 4 Apps for All Owners
+                    Unlock All 4 Apps for Owners
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSavePlatformIntegrations()}
-                    className="inline-flex items-center gap-2 rounded-xl border border-orange-500/50 bg-orange-500/20 px-4 py-3 text-xs font-bold text-orange-200 hover:bg-orange-500/30"
+                    className="inline-flex items-center gap-2 rounded-xl border border-orange-500/40 bg-orange-500/15 px-4 py-2.5 text-xs font-semibold text-orange-200 hover:bg-orange-500/25 transition"
                   >
                     Save Master Config
                   </button>
@@ -2610,17 +2637,19 @@ export default function SuperAdminDashboard() {
                 {[
                   {
                     key: "doordashDrive" as const,
-                    icon: "🚗",
-                    title: "1. DoorDash Drive API",
+                    icon: Truck,
+                    iconColor: "text-rose-400",
+                    title: "DoorDash Drive API",
                     ready:
                       platformIntegrations.doordashDrive.setupCompleted &&
                       platformIntegrations.doordashDrive.availableToOwners,
-                    sub: `Default Flat Quote: $${platformIntegrations.doordashDrive.defaultFlatFeeQuote.toFixed(2)}`,
+                    sub: `Flat Quote: $${platformIntegrations.doordashDrive.defaultFlatFeeQuote.toFixed(2)}`,
                   },
                   {
                     key: "square" as const,
-                    icon: "⬛",
-                    title: "2. Square POS & Payments",
+                    icon: CreditCard,
+                    iconColor: "text-sky-400",
+                    title: "Square POS & Cards",
                     ready:
                       platformIntegrations.square.setupCompleted &&
                       platformIntegrations.square.availableToOwners,
@@ -2628,8 +2657,9 @@ export default function SuperAdminDashboard() {
                   },
                   {
                     key: "clover" as const,
-                    icon: "🍀",
-                    title: "3. Clover POS & KDS",
+                    icon: Layers,
+                    iconColor: "text-emerald-400",
+                    title: "Clover POS & KDS",
                     ready:
                       platformIntegrations.clover.setupCompleted &&
                       platformIntegrations.clover.availableToOwners,
@@ -2637,50 +2667,57 @@ export default function SuperAdminDashboard() {
                   },
                   {
                     key: "vapi" as const,
-                    icon: "📞",
-                    title: "4. Vapi Voice AI",
+                    icon: PhoneCall,
+                    iconColor: "text-amber-400",
+                    title: "Vapi Voice AI",
                     ready:
                       platformIntegrations.vapi.setupCompleted &&
                       platformIntegrations.vapi.availableToOwners,
                     sub: `Voice: ${platformIntegrations.vapi.defaultVoiceModel}`,
                   },
-                ].map((card) => (
-                  <div
-                    key={card.key}
-                    className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="text-xs font-bold text-white">
-                        {card.icon} {card.title}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        {card.sub}
-                      </div>
-                    </div>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                        card.ready
-                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                          : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                      }`}
+                ].map((card) => {
+                  const CardIcon = card.icon;
+                  return (
+                    <div
+                      key={card.key}
+                      className="rounded-xl border border-white/[0.08] bg-[#090b10] p-4 flex items-center justify-between gap-2"
                     >
-                      {card.ready ? "UNLOCKED" : "PENDING"}
-                    </span>
-                  </div>
-                ))}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                          <CardIcon className={`h-3.5 w-3.5 shrink-0 ${card.iconColor}`} />
+                          <span className="truncate">{card.title}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-1 tabular-nums">
+                          {card.sub}
+                        </div>
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          card.ready
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                        }`}
+                      >
+                        {card.ready ? "UNLOCKED" : "PENDING"}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* 2x2 Grid of Master Platform Partner Configurations */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               {/* 1. DOORDASH DRIVE MASTER SETUP */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl">🚗</span>
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/15 text-rose-400">
+                      <Truck className="h-5 w-5" />
+                    </div>
                     <div>
                       <h4 className="text-base font-bold text-white">
-                        1. DoorDash Drive API (Platform Partner Keys)
+                        DoorDash Drive API (Partner Keys)
                       </h4>
                       <p className="text-xs text-slate-400">
                         White-label Dasher dispatch for tenant delivery orders
@@ -2703,7 +2740,7 @@ export default function SuperAdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#090b10] p-3 text-xs font-semibold text-white cursor-pointer">
                     <input
                       type="checkbox"
                       checked={platformIntegrations.doordashDrive.setupCompleted}
@@ -2720,9 +2757,10 @@ export default function SuperAdminDashboard() {
                       }}
                       className="h-4 w-4 rounded accent-emerald-500"
                     />
-                    ✅ Step 1: Admin Setup Completed
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>Step 1: Setup Completed</span>
                   </label>
-                  <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs font-semibold text-emerald-300 cursor-pointer">
+                  <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#090b10] p-3 text-xs font-semibold text-emerald-300 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={
@@ -2741,7 +2779,8 @@ export default function SuperAdminDashboard() {
                       }}
                       className="h-4 w-4 rounded accent-emerald-500"
                     />
-                    🔓 Step 2: Release to Owners
+                    <Unlock className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>Step 2: Release to Owners</span>
                   </label>
                 </div>
 
@@ -2764,7 +2803,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -2783,22 +2822,30 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
                     <div className="flex items-center justify-between">
                       <label className="block text-[11px] text-slate-400">
-                        Partner Signing Secret (HS256 Base64URL)
+                        Partner Signing Secret (HS256)
                       </label>
                       <button
                         type="button"
                         onClick={() =>
                           setShowIntegrationSecrets(!showIntegrationSecrets)
                         }
-                        className="text-[10px] font-semibold text-orange-300 hover:text-orange-200"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-300 hover:text-orange-200"
                       >
-                        {showIntegrationSecrets ? "🙈 Hide Secret" : "👁️ Show Secret"}
+                        {showIntegrationSecrets ? (
+                          <>
+                            <EyeOff className="h-3 w-3" /> Hide
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3 w-3" /> Show
+                          </>
+                        )}
                       </button>
                     </div>
                     <input
@@ -2815,7 +2862,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -2833,14 +2880,10 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-emerald-300"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs font-bold text-emerald-300 focus:border-orange-500/60 focus:outline-none"
                     >
-                      <option value="simulated">
-                        Auto-Detect Sandbox / Simulated Fallback
-                      </option>
-                      <option value="live">
-                        Live DoorDash Drive API v2 (openapi.doordash.com)
-                      </option>
+                      <option value="simulated">Sandbox / Auto-Detect</option>
+                      <option value="live">Live Drive API v2</option>
                     </select>
                   </div>
                   <div className="sm:col-span-2">
@@ -2859,15 +2902,18 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-sky-300"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-sky-300 focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
-                  <span className="text-[11px] text-slate-400">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
+                    {lastSavedIntegrationsAt && (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    )}
                     {lastSavedIntegrationsAt
-                      ? `✅ Saved at ${lastSavedIntegrationsAt}`
+                      ? `Saved at ${lastSavedIntegrationsAt}`
                       : `Synced (${new Date(
                           platformIntegrations.updatedAt
                         ).toLocaleDateString()})`}
@@ -2881,7 +2927,7 @@ export default function SuperAdminDashboard() {
                         "DoorDash Drive"
                       )
                     }
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {savingIntegrations
@@ -2892,13 +2938,15 @@ export default function SuperAdminDashboard() {
               </div>
 
               {/* 2. SQUARE POS MASTER SETUP */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl">⬛</span>
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-500/30 bg-sky-500/15 text-sky-400">
+                      <CreditCard className="h-5 w-5" />
+                    </div>
                     <div>
                       <h4 className="text-base font-bold text-white">
-                        2. Square POS &amp; Payments (Partner OAuth App)
+                        Square POS &amp; Payments (Partner OAuth App)
                       </h4>
                       <p className="text-xs text-slate-400">
                         2-way menu, portion variants, sides &amp; Sold-Out sync
@@ -2921,7 +2969,7 @@ export default function SuperAdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#090b10] p-3 text-xs font-semibold text-white cursor-pointer">
                     <input
                       type="checkbox"
                       checked={platformIntegrations.square.setupCompleted}
@@ -2938,9 +2986,10 @@ export default function SuperAdminDashboard() {
                       }}
                       className="h-4 w-4 rounded accent-emerald-500"
                     />
-                    ✅ Step 1: Admin Setup Completed
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>Step 1: Setup Completed</span>
                   </label>
-                  <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs font-semibold text-emerald-300 cursor-pointer">
+                  <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#090b10] p-3 text-xs font-semibold text-emerald-300 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={platformIntegrations.square.availableToOwners}
@@ -2957,7 +3006,8 @@ export default function SuperAdminDashboard() {
                       }}
                       className="h-4 w-4 rounded accent-emerald-500"
                     />
-                    🔓 Step 2: Release to Owners
+                    <Unlock className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>Step 2: Release to Owners</span>
                   </label>
                 </div>
 
@@ -2978,7 +3028,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -2991,9 +3041,17 @@ export default function SuperAdminDashboard() {
                         onClick={() =>
                           setShowIntegrationSecrets(!showIntegrationSecrets)
                         }
-                        className="text-[10px] font-semibold text-orange-300 hover:text-orange-200"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-300 hover:text-orange-200"
                       >
-                        {showIntegrationSecrets ? "🙈 Hide" : "👁️ Show"}
+                        {showIntegrationSecrets ? (
+                          <>
+                            <EyeOff className="h-3 w-3" /> Hide
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3 w-3" /> Show
+                          </>
+                        )}
                       </button>
                     </div>
                     <input
@@ -3008,7 +3066,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -3027,7 +3085,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -3047,7 +3105,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-emerald-300"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs font-bold text-emerald-300 focus:border-orange-500/60 focus:outline-none"
                     >
                       <option value="sandbox">Square Sandbox</option>
                       <option value="production">Square Production</option>
@@ -3069,15 +3127,18 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-sky-300"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-sky-300 focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
-                  <span className="text-[11px] text-slate-400">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
+                    {lastSavedIntegrationsAt && (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    )}
                     {lastSavedIntegrationsAt
-                      ? `✅ Saved at ${lastSavedIntegrationsAt}`
+                      ? `Saved at ${lastSavedIntegrationsAt}`
                       : "Square OAuth 2.0 + Catalog API v2"}
                   </span>
                   <button
@@ -3089,7 +3150,7 @@ export default function SuperAdminDashboard() {
                         "Square POS"
                       )
                     }
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {savingIntegrations ? "Saving..." : "Save Square API Keys"}
@@ -3098,13 +3159,15 @@ export default function SuperAdminDashboard() {
               </div>
 
               {/* 3. CLOVER POS MASTER SETUP */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl">🍀</span>
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/15 text-emerald-400">
+                      <Layers className="h-5 w-5" />
+                    </div>
                     <div>
                       <h4 className="text-base font-bold text-white">
-                        3. Clover POS &amp; Kitchen Printer (App Market Setup)
+                        Clover POS &amp; Kitchen Printer
                       </h4>
                       <p className="text-xs text-slate-400">
                         Atomic order push to Clover KDS &amp; real-time stock sync
@@ -3127,7 +3190,7 @@ export default function SuperAdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#090b10] p-3 text-xs font-semibold text-white cursor-pointer">
                     <input
                       type="checkbox"
                       checked={platformIntegrations.clover.setupCompleted}
@@ -3144,9 +3207,10 @@ export default function SuperAdminDashboard() {
                       }}
                       className="h-4 w-4 rounded accent-emerald-500"
                     />
-                    ✅ Step 1: Admin Setup Completed
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>Step 1: Setup Completed</span>
                   </label>
-                  <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs font-semibold text-emerald-300 cursor-pointer">
+                  <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#090b10] p-3 text-xs font-semibold text-emerald-300 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={platformIntegrations.clover.availableToOwners}
@@ -3163,7 +3227,8 @@ export default function SuperAdminDashboard() {
                       }}
                       className="h-4 w-4 rounded accent-emerald-500"
                     />
-                    🔓 Step 2: Release to Owners
+                    <Unlock className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>Step 2: Release to Owners</span>
                   </label>
                 </div>
 
@@ -3184,7 +3249,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -3197,9 +3262,17 @@ export default function SuperAdminDashboard() {
                         onClick={() =>
                           setShowIntegrationSecrets(!showIntegrationSecrets)
                         }
-                        className="text-[10px] font-semibold text-orange-300 hover:text-orange-200"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-300 hover:text-orange-200"
                       >
-                        {showIntegrationSecrets ? "🙈 Hide" : "👁️ Show"}
+                        {showIntegrationSecrets ? (
+                          <>
+                            <EyeOff className="h-3 w-3" /> Hide
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3 w-3" /> Show
+                          </>
+                        )}
                       </button>
                     </div>
                     <input
@@ -3214,7 +3287,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -3235,7 +3308,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -3255,7 +3328,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-emerald-300"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs font-bold text-emerald-300 focus:border-orange-500/60 focus:outline-none"
                     >
                       <option value="sandbox">Clover Sandbox</option>
                       <option value="production">Clover Production</option>
@@ -3277,15 +3350,18 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-sky-300"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-sky-300 focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
-                  <span className="text-[11px] text-slate-400">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
+                    {lastSavedIntegrationsAt && (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    )}
                     {lastSavedIntegrationsAt
-                      ? `✅ Saved at ${lastSavedIntegrationsAt}`
+                      ? `Saved at ${lastSavedIntegrationsAt}`
                       : "Clover OAuth 2.0 + Atomic Orders v3"}
                   </span>
                   <button
@@ -3297,7 +3373,7 @@ export default function SuperAdminDashboard() {
                         "Clover POS"
                       )
                     }
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {savingIntegrations ? "Saving..." : "Save Clover API Keys"}
@@ -3306,16 +3382,19 @@ export default function SuperAdminDashboard() {
               </div>
 
               {/* 4. VAPI VOICE AI MASTER SETUP */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl">📞</span>
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/15 text-amber-400">
+                      <PhoneCall className="h-5 w-5" />
+                    </div>
                     <div>
                       <h4 className="text-base font-bold text-white">
-                        4. Vapi Voice AI (Master Telephony &amp; Voice LLM)
+                        Vapi Voice AI (Telephony &amp; LLM)
                       </h4>
                       <p className="text-xs text-slate-400">
-                        24/7 inbound phone ordering &amp; live menu/stock voice brain
+                        24/7 inbound phone ordering &amp; live menu/stock voice
+                        brain
                       </p>
                     </div>
                   </div>
@@ -3335,7 +3414,7 @@ export default function SuperAdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#090b10] p-3 text-xs font-semibold text-white cursor-pointer">
                     <input
                       type="checkbox"
                       checked={platformIntegrations.vapi.setupCompleted}
@@ -3352,9 +3431,10 @@ export default function SuperAdminDashboard() {
                       }}
                       className="h-4 w-4 rounded accent-emerald-500"
                     />
-                    ✅ Step 1: Admin Setup Completed
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>Step 1: Setup Completed</span>
                   </label>
-                  <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs font-semibold text-emerald-300 cursor-pointer">
+                  <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#090b10] p-3 text-xs font-semibold text-emerald-300 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={platformIntegrations.vapi.availableToOwners}
@@ -3371,7 +3451,8 @@ export default function SuperAdminDashboard() {
                       }}
                       className="h-4 w-4 rounded accent-emerald-500"
                     />
-                    🔓 Step 2: Release to Owners
+                    <Unlock className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>Step 2: Release to Owners</span>
                   </label>
                 </div>
 
@@ -3392,7 +3473,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -3405,9 +3486,17 @@ export default function SuperAdminDashboard() {
                         onClick={() =>
                           setShowIntegrationSecrets(!showIntegrationSecrets)
                         }
-                        className="text-[10px] font-semibold text-orange-300 hover:text-orange-200"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-300 hover:text-orange-200"
                       >
-                        {showIntegrationSecrets ? "🙈 Hide" : "👁️ Show"}
+                        {showIntegrationSecrets ? (
+                          <>
+                            <EyeOff className="h-3 w-3" /> Hide
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3 w-3" /> Show
+                          </>
+                        )}
                       </button>
                     </div>
                     <input
@@ -3422,7 +3511,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div className="sm:col-span-2">
@@ -3441,7 +3530,7 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-white"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-white focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                   <div className="sm:col-span-2">
@@ -3460,15 +3549,18 @@ export default function SuperAdminDashboard() {
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-xs text-amber-300"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 font-mono text-xs text-amber-300 focus:border-orange-500/60 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
-                  <span className="text-[11px] text-slate-400">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
+                    {lastSavedIntegrationsAt && (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    )}
                     {lastSavedIntegrationsAt
-                      ? `✅ Saved at ${lastSavedIntegrationsAt}`
+                      ? `Saved at ${lastSavedIntegrationsAt}`
                       : "Vapi Voice AI + Live Menu Brain"}
                   </span>
                   <button
@@ -3480,7 +3572,7 @@ export default function SuperAdminDashboard() {
                         "Vapi Voice AI"
                       )
                     }
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {savingIntegrations ? "Saving..." : "Save Vapi API Keys"}
@@ -3490,16 +3582,19 @@ export default function SuperAdminDashboard() {
             </div>
 
             {/* PER-TENANT INTEGRATION ENTITLEMENT MATRIX */}
-            <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 space-y-4">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-6 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h4 className="text-base font-bold text-white">
-                    🏪 Per-Restaurant Integration Entitlements ({restaurants.length} Tenants)
+                  <h4 className="flex items-center gap-2 text-base font-bold text-white">
+                    <Store className="h-4 w-4 text-orange-400" />
+                    <span>
+                      Per-Restaurant Integration Entitlements ({restaurants.length}{" "}
+                      Tenants)
+                    </span>
                   </h4>
                   <p className="text-xs text-slate-400">
                     Choose which restaurants get access to each integration once
-                    Platform Admin setup is complete. Toggle any switch below to
-                    unlock or lock that app in the owner&apos;s portal.
+                    Platform Admin setup is complete.
                   </p>
                 </div>
               </div>
@@ -3508,7 +3603,7 @@ export default function SuperAdminDashboard() {
                 {restaurants.map((tenant) => (
                   <div
                     key={tenant.id}
-                    className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3"
+                    className="rounded-xl border border-white/[0.08] bg-[#090b10] p-4 space-y-3"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -3529,34 +3624,39 @@ export default function SuperAdminDashboard() {
                         href={`/dashboard/${encodeURIComponent(
                           tenant.customDomain
                         )}`}
-                        className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-[10px] font-semibold text-orange-300 hover:bg-slate-800"
+                        className="shrink-0 rounded-lg border border-white/10 bg-[#0f131b] px-2.5 py-1 text-[10px] font-semibold text-orange-300 hover:border-white/20 transition"
                       >
-                        Open Portal →
+                        Portal →
                       </Link>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80">
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.06]">
                       {(
                         [
                           {
                             key: "doordashDrive" as const,
-                            label: "🚗 DoorDash Drive",
+                            label: "DoorDash Drive",
+                            icon: Truck,
                           },
                           {
                             key: "squarePos" as const,
-                            label: "⬛ Square POS",
+                            label: "Square POS",
+                            icon: CreditCard,
                           },
                           {
                             key: "cloverPos" as const,
-                            label: "🍀 Clover POS",
+                            label: "Clover POS",
+                            icon: Layers,
                           },
                           {
                             key: "vapiVoiceAi" as const,
-                            label: "📞 Vapi Voice AI",
+                            label: "Vapi Voice AI",
+                            icon: PhoneCall,
                           },
                         ] as const
                       ).map((app) => {
                         const isEnabled = tenant.features[app.key] !== false;
+                        const AppIcon = app.icon;
                         return (
                           <button
                             key={app.key}
@@ -3569,15 +3669,18 @@ export default function SuperAdminDashboard() {
                                 !isEnabled
                               )
                             }
-                            className={`flex items-center justify-between rounded-xl border px-2.5 py-2 text-left text-[11px] font-bold transition ${
+                            className={`flex items-center justify-between gap-1.5 rounded-xl border px-2.5 py-2 text-left text-[11px] font-semibold transition ${
                               isEnabled
-                                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
-                                : "border-slate-800 bg-slate-900 text-slate-500"
+                                ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-200"
+                                : "border-white/[0.07] bg-[#0f131b] text-slate-500"
                             }`}
                           >
-                            <span className="truncate">{app.label}</span>
+                            <span className="flex items-center gap-1.5 truncate">
+                              <AppIcon className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{app.label}</span>
+                            </span>
                             <span className="font-mono text-[9px] uppercase">
-                              {isEnabled ? "ON" : "LOCKED"}
+                              {isEnabled ? "ON" : "OFF"}
                             </span>
                           </button>
                         );

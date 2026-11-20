@@ -2,17 +2,19 @@
 
 import React, { useState } from "react";
 import {
+  AlertTriangle,
   CalendarClock,
-  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   CreditCard,
   Globe,
   HelpCircle,
   Mail,
   MessageSquare,
   Package,
+  Plug,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   Users,
   Utensils,
 } from "lucide-react";
@@ -27,135 +29,135 @@ interface OwnerBeginnerGuideBarProps {
   pendingOrdersCount: number;
 }
 
-const TAB_PLAIN_GUIDES: Record<
+const TAB_GUIDES: Record<
   PortalTabId,
   {
-    emoji: string;
-    simpleTitle: string;
+    title: string;
     whatYouDoHere: string;
     threeEasySteps: [string, string, string];
+    icon: React.ComponentType<{ className?: string }>;
   }
 > = {
   orders: {
-    emoji: "🛍️",
-    simpleTitle: "Step 1: Incoming Customer Food Orders",
+    title: "Live Orders & Kitchen Queue",
     whatYouDoHere:
-      "When a customer orders food on your website, it appears here immediately. You just click one button as you cook their food, and we automatically text the customer's phone!",
+      "Track incoming customer orders from web, QR dine-in, and voice AI. Advance ticket status to trigger automatic customer SMS updates.",
     threeEasySteps: [
-      "1️⃣ Click 'Mark Confirmed' when you see a new order.",
-      "2️⃣ Click 'Start Preparing' when the chef starts cooking.",
-      "3️⃣ Click 'Mark Ready' when packed — customer gets a text message automatically!",
+      "Click Actions on a new ticket to confirm it and send an SMS confirmation.",
+      "Move orders to Preparing when fired on the line.",
+      "Mark Ready when packed for counter pickup or DoorDash courier handoff.",
     ],
+    icon: ShoppingBag,
   },
   menu: {
-    emoji: "🍲",
-    simpleTitle: "Step 2: Your Food Menu, Prices & Sold-Out Button",
+    title: "Menu Builder & 86 Controls",
     whatYouDoHere:
-      "Add new dishes with photos, change prices, add Portion Sizes (e.g., Regular Bowl vs Big Family Tray) & Side Dishes (e.g., Fried Plantain / Moi-Moi), or mark a dish Sold Out when it finishes.",
+      "Add dishes, upload photos, configure portion sizes and sides, or toggle sold-out status across web and POS.",
     threeEasySteps: [
-      "1️⃣ Use the left box to add a new dish with photo & price.",
-      "2️⃣ Click 'Mark Sold Out' on any dish card if it finishes in the kitchen.",
-      "3️⃣ Click 'Edit / Update' on any dish to change its price, photo, or sides.",
+      "Add new dishes with photos, pricing, dietary tags, and prep times.",
+      "Toggle availability to immediately mark sold-out items across your storefront.",
+      "Edit dishes to manage portion variants and side options.",
     ],
+    icon: Utensils,
   },
   inventory: {
-    emoji: "📦",
-    simpleTitle: "Step 3: Kitchen Pots, Meat Stock & Profit per Plate",
+    title: "Kitchen Stock & Plate Margins",
     whatYouDoHere:
-      "Track your shared pots and meats (like Party Jollof Base, Asun Goat Meat, Egusi Soup, Plantain, Takeaway Packs & Cooking Gas) using simple cards.",
+      "Monitor line stock, freezer backup levels, ingredient-to-dish auto-86 links, and per-plate COGS margins.",
     threeEasySteps: [
-      "1️⃣ Check green/yellow/red cards to see what is plenty or running low.",
-      "2️⃣ Tap 'Refill Kitchen from Store Backup' when you bring items from your store/freezer.",
-      "3️⃣ Open 'Profit per Plate' to see how much profit you keep on every plate sold.",
+      "Watch Healthy, Low, and Out-of-Stock counts across your prep stations.",
+      "Tap Refill from Store to transfer backup commissary stock onto the line.",
+      "Review Plate Margins to check food cost percentages and gross profit.",
     ],
+    icon: Package,
   },
   limits: {
-    emoji: "🕒",
-    simpleTitle: "Step 4: Pickup, Delivery, Opening Hours & Holiday Closures",
+    title: "Hours, Fulfillment & Capacity",
     whatYouDoHere:
-      "Choose whether you offer Pickup, Delivery, or Eat-In, set your daily opening/closing times, and set how many orders your kitchen can handle per hour.",
+      "Manage pickup, delivery, and dine-in channels alongside operating hours, order caps, and scheduled blackout closures.",
     threeEasySteps: [
-      "1️⃣ Turn Pickup, Delivery, or Eat-In ON or OFF with 1 click.",
-      "2️⃣ Set your Monday–Sunday opening & closing hours.",
-      "3️⃣ Add a Holiday / Private Party Closure if you are closing for an event.",
+      "Enable or configure Pickup, Delivery, and Dine-In QR channels.",
+      "Set daily opening and closing service windows for each day of the week.",
+      "Add blackout closures for holidays, private events, or kitchen breaks.",
     ],
+    icon: CalendarClock,
   },
   customers: {
-    emoji: "👥",
-    simpleTitle: "Step 5: Your Customer List & VIP Regulars",
+    title: "Guest CRM & Loyalty",
     whatYouDoHere:
-      "Every customer who orders from your website is saved here automatically with their phone number, email, and how many times they have ordered.",
+      "Every storefront and phone order builds your guest directory with spend history, VIP tags, and reorder activity.",
     threeEasySteps: [
-      "1️⃣ Search any customer by name or phone number.",
-      "2️⃣ Add walk-in or VIP party customers manually on the left.",
-      "3️⃣ See who your biggest spenders and repeat regulars are.",
+      "Search guests by name, email, or phone number.",
+      "Add walk-in or catering VIP contacts manually when needed.",
+      "Identify repeat regulars for targeted SMS and email promotions.",
     ],
+    icon: Users,
   },
   sms: {
-    emoji: "📲",
-    simpleTitle: "Step 6: Automatic Phone Text Alerts (SMS)",
+    title: "Automated SMS Alerts",
     whatYouDoHere:
-      "Already connected for you! No technical setup needed. Put your kitchen phone number here so you get a text alert every time a new order arrives.",
+      "Powered centrally by Platerift's Twilio gateway. Configure your owner alert number, guest event triggers, and promotional broadcasts.",
     threeEasySteps: [
-      "1️⃣ Enter your mobile phone number to receive new-order text alerts.",
-      "2️⃣ Check the boxes for which updates customers receive by text.",
-      "3️⃣ Send a quick promo text message to all your customers anytime.",
+      "Enter the mobile number that should receive instant new-order alerts.",
+      "Choose which order milestones automatically text customers.",
+      "Send targeted or all-guest SMS promos directly from this workspace.",
     ],
+    icon: MessageSquare,
   },
   email: {
-    emoji: "✉️",
-    simpleTitle: "Step 7: Send Promo & Weekend Special Emails",
+    title: "Email Marketing & Promo Codes",
     whatYouDoHere:
-      "Send a friendly email with a discount code (like Weekend Jollof & Suya Special) to all your past customers in 1 click.",
+      "Launch branded HTML campaigns with trackable discount codes that validate automatically at checkout.",
     threeEasySteps: [
-      "1️⃣ Type a catchy subject line (e.g. '15% Off Friday Night Suya & Jollof!').",
-      "2️⃣ Choose 'All Customers' or 'VIP Guests' and add a promo code.",
-      "3️⃣ Click 'Send Email Now' — see how many orders it brings in!",
+      "Write your subject line and campaign message.",
+      "Select All Guests or VIP Regulars and attach a promo code.",
+      "Send now and track campaign redemptions and engagement.",
     ],
+    icon: Mail,
   },
   payments: {
-    emoji: "💳",
-    simpleTitle: "Step 8: Receive Customer Payments, Tax & Delivery Fee",
+    title: "Direct Payments, Tax & Fees",
     whatYouDoHere:
-      "Connect your Stripe, PayPal, Square, or Clover account so customer payments go straight to your bank, and set your Delivery Fee.",
+      "Connect your Stripe, Square, Clover, or PayPal credentials for 0%-commission payouts alongside tax and delivery fees.",
     threeEasySteps: [
-      "1️⃣ Turn Stripe, PayPal, Square, or Clover ON.",
-      "2️⃣ Set your Sales Tax % and Delivery Fee ($).",
-      "3️⃣ Click 'Save Payment & Fee Settings'.",
+      "Enable the card and wallet gateways active on your storefront checkout.",
+      "Configure sales tax percentage and delivery fee / minimum spend rules.",
+      "Save settings to update checkout calculation immediately.",
     ],
+    icon: CreditCard,
   },
   integrations: {
-    emoji: "🔌",
-    simpleTitle: "Step 9: Plug & Play Apps (DoorDash Driver, Square, Clover & Vapi Voice AI)",
+    title: "Integrations: DoorDash, Square, Clover & Vapi",
     whatYouDoHere:
-      "Connect your kitchen to 4 powerful helpers in 1 click: call a DoorDash Driver for website deliveries (0% commission!), sync your Square or Clover register & kitchen printer, and let Vapi AI answer phone calls and take food orders 24/7.",
+      "Connect white-label DoorDash Drive couriers, 2-way Square or Clover POS sync, and Vapi 24/7 inbound voice AI ordering.",
     threeEasySteps: [
-      "1️⃣ Flip the ON/OFF switch on any of the 4 cards (DoorDash Driver, Square, Clover, or Vapi Phone AI).",
-      "2️⃣ Tap the 1-Click Test button on any card to watch a simulated driver, POS sync, or phone call in action.",
-      "3️⃣ When ready for real customers, switch from 'Practice / Demo Mode' to 'Live Mode' and paste your account ID.",
+      "Toggle on any unlocked integration card to activate its workflow.",
+      "Use Practice / Sandbox test actions before going live in production.",
+      "Switch to Live mode or connect OAuth when ready for service.",
     ],
+    icon: Plug,
   },
   domain: {
-    emoji: "🌐",
-    simpleTitle: "Step 10: Website Address, Logo, About Us & Policies",
+    title: "Website, Domain, Logo & About Us",
     whatYouDoHere:
-      "Customize how your website looks! Upload your restaurant logo, write your 'About Us' story (shown right under your top banner), edit your footer contact info, and update your Refund/Privacy rules.",
+      "Customize your storefront theme, upload your restaurant logo, edit your About Us story, footer links, and policy pages.",
     threeEasySteps: [
-      "1️⃣ Pick your brand color and website layout style at the top.",
-      "2️⃣ Scroll down to upload your Logo and edit your 'About Us' story.",
-      "3️⃣ Edit your Footer contact info, Privacy Policy & Terms in plain words.",
+      "Choose your brand accent color, storefront layout preset, and domain.",
+      "Upload or link your logo and refine your About Us story.",
+      "Customize footer contact details, hours summary, and store policies.",
     ],
+    icon: Globe,
   },
   team: {
-    emoji: "👨‍🍳",
-    simpleTitle: "Step 11: Kitchen, Cashier & Manager Staff Accounts",
+    title: "Staff Accounts, PINs & Roles",
     whatYouDoHere:
-      "Create simple 4-digit PIN codes for your Head Chef, Cashier, or Manager so they only see the screens they need (without touching your bank or website settings).",
+      "Create role-scoped portal credentials and quick POS PINs for General Managers, Head Chefs, Cashiers, and Marketing leads.",
     threeEasySteps: [
-      "1️⃣ Enter your staff member's name and choose their job (Chef, Cashier, Manager).",
-      "2️⃣ Give them a simple 4-digit PIN code (like 5501).",
-      "3️⃣ Click 'Preview Role' to see how simple their screen looks!",
+      "Add staff with name, email, role, and a quick terminal PIN.",
+      "Use Role Switcher preview to inspect exact permissions per role.",
+      "Suspend or adjust staff access at any time with zero downtime.",
     ],
+    icon: ShieldCheck,
   },
 };
 
@@ -167,215 +169,115 @@ export function OwnerBeginnerGuideBar({
   lowStockCount,
   pendingOrdersCount,
 }: OwnerBeginnerGuideBarProps) {
-  const [showGuide, setShowGuide] = useState(true);
-  const currentGuide = TAB_PLAIN_GUIDES[activeTab] || TAB_PLAIN_GUIDES.orders;
+  const [showGuide, setShowGuide] = useState(false);
+  const currentGuide = TAB_GUIDES[activeTab] || TAB_GUIDES.orders;
+  const ActiveIcon = currentGuide.icon;
 
   return (
-    <div className="mb-6 space-y-3">
-      {/* Quick 5-Card Action Roll for Beginners */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/95 p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/20 border border-orange-500/40 px-3 py-0.5 text-[11px] font-bold text-orange-300">
-              <Sparkles className="h-3.5 w-3.5" />
-              Easy Owner Shortcut Cards
-            </span>
-            <span className="text-xs text-slate-400 hidden sm:inline">
-              Tap any card below to jump straight to what you want to do today:
-            </span>
+    <div className="mb-5 rounded-2xl border border-white/[0.08] bg-[#0f131b]/95 px-4 py-3 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Left: Active section title & subtle restaurant context */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-orange-500/30 bg-orange-500/10 text-orange-400">
+            <ActiveIcon className="h-4 w-4" />
           </div>
-
-          <button
-            type="button"
-            onClick={() => setShowGuide(!showGuide)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-1 text-[11px] font-semibold text-slate-300 hover:text-white"
-          >
-            <HelpCircle className="h-3.5 w-3.5 text-orange-400" />
-            {showGuide ? "Hide Step-by-Step Help" : "Show Step-by-Step Help"}
-          </button>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-xs sm:text-sm font-semibold text-white">
+                {currentGuide.title}
+              </span>
+              <span className="hidden md:inline text-[11px] text-slate-500">
+                • {restaurantName}
+              </span>
+            </div>
+            <p className="hidden lg:block truncate text-[11px] text-slate-400">
+              {currentGuide.whatYouDoHere}
+            </p>
+          </div>
         </div>
 
-        {/* Multi-Card Row of 6 Everyday Owner Actions */}
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+        {/* Right: Actionable pulse pills + Quick Guide toggle */}
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => onSelectTab("orders")}
-            className={`flex flex-col justify-between rounded-xl border p-3 text-left transition ${
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums transition ${
               activeTab === "orders"
-                ? "border-orange-500 bg-orange-500/15 text-white shadow"
-                : "border-slate-800 bg-slate-950/90 text-slate-300 hover:border-slate-700"
+                ? "border-orange-500/40 bg-orange-500/15 text-orange-300"
+                : pendingOrdersCount > 0
+                ? "border-orange-500/30 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20"
+                : "border-white/[0.08] bg-white/[0.03] text-slate-400 hover:text-slate-200"
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-base">🛍️</span>
-              <span className="rounded-full bg-orange-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-orange-300">
-                {pendingOrdersCount} Active
-              </span>
-            </div>
-            <div className="mt-2 text-xs font-bold text-white">
-              1. Check Orders
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Confirm & mark food ready
-            </div>
+            <ShoppingBag className="h-3 w-3" />
+            <span>{pendingOrdersCount} Active Orders</span>
           </button>
+
+          {soldOutDishesCount > 0 && (
+            <button
+              type="button"
+              onClick={() => onSelectTab("menu")}
+              className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/35 bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-rose-300 hover:bg-rose-500/20 transition"
+            >
+              <AlertTriangle className="h-3 w-3" />
+              <span>{soldOutDishesCount} Sold Out</span>
+            </button>
+          )}
+
+          {lowStockCount > 0 && (
+            <button
+              type="button"
+              onClick={() => onSelectTab("inventory")}
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-amber-300 hover:bg-amber-500/20 transition"
+            >
+              <Package className="h-3 w-3" />
+              <span>{lowStockCount} Low Stock</span>
+            </button>
+          )}
 
           <button
             type="button"
-            onClick={() => onSelectTab("menu")}
-            className={`flex flex-col justify-between rounded-xl border p-3 text-left transition ${
-              activeTab === "menu"
-                ? "border-orange-500 bg-orange-500/15 text-white shadow"
-                : "border-slate-800 bg-slate-950/90 text-slate-300 hover:border-slate-700"
+            onClick={() => setShowGuide((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-semibold transition ${
+              showGuide
+                ? "border-orange-500/40 bg-orange-500/15 text-orange-200"
+                : "border-white/10 bg-[#090b10] text-slate-300 hover:border-white/20 hover:text-white"
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-base">🍲</span>
-              {soldOutDishesCount > 0 ? (
-                <span className="rounded-full bg-rose-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-rose-300">
-                  {soldOutDishesCount} Sold Out
-                </span>
-              ) : (
-                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300">
-                  All Live
-                </span>
-              )}
-            </div>
-            <div className="mt-2 text-xs font-bold text-white">
-              2. Menu & Prices
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Add food or mark Sold Out
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab("inventory")}
-            className={`flex flex-col justify-between rounded-xl border p-3 text-left transition ${
-              activeTab === "inventory"
-                ? "border-orange-500 bg-orange-500/15 text-white shadow"
-                : "border-slate-800 bg-slate-950/90 text-slate-300 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-base">📦</span>
-              {lowStockCount > 0 ? (
-                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-300">
-                  {lowStockCount} Low
-                </span>
-              ) : (
-                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300">
-                  Stock OK
-                </span>
-              )}
-            </div>
-            <div className="mt-2 text-xs font-bold text-white">
-              3. Pots & Profit
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Kitchen stock & profit cards
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab("limits")}
-            className={`flex flex-col justify-between rounded-xl border p-3 text-left transition ${
-              activeTab === "limits"
-                ? "border-orange-500 bg-orange-500/15 text-white shadow"
-                : "border-slate-800 bg-slate-950/90 text-slate-300 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-base">🕒</span>
-              <span className="rounded-full bg-sky-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-sky-300">
-                Hours
-              </span>
-            </div>
-            <div className="mt-2 text-xs font-bold text-white">
-              4. Hours & Delivery
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Opening times & delivery fee
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab("domain")}
-            className={`flex flex-col justify-between rounded-xl border p-3 text-left transition ${
-              activeTab === "domain"
-                ? "border-orange-500 bg-orange-500/15 text-white shadow"
-                : "border-slate-800 bg-slate-950/90 text-slate-300 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-base">🎨</span>
-              <span className="rounded-full bg-purple-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-purple-300">
-                Website
-              </span>
-            </div>
-            <div className="mt-2 text-xs font-bold text-white">
-              5. Logo & About Us
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Edit website look & policies
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab("integrations")}
-            className={`flex flex-col justify-between rounded-xl border p-3 text-left transition ${
-              activeTab === "integrations"
-                ? "border-orange-500 bg-orange-500/15 text-white shadow"
-                : "border-slate-800 bg-slate-950/90 text-slate-300 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-base">🔌</span>
-              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300">
-                4 Apps
-              </span>
-            </div>
-            <div className="mt-2 text-xs font-bold text-white">
-              6. Plug & Play Apps
-            </div>
-            <div className="text-[10px] text-slate-400">
-              DoorDash, Square, Clover & Vapi
-            </div>
+            <HelpCircle className="h-3.5 w-3.5 text-orange-400" />
+            <span>Quick Guide</span>
+            {showGuide ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
           </button>
         </div>
-
-        {/* Contextual Plain-English Guide for the Active Page */}
-        {showGuide && (
-          <div className="rounded-xl border border-orange-500/30 bg-slate-950/90 p-4 space-y-3">
-            <div>
-              <div className="text-xs font-bold text-orange-300">
-                {currentGuide.emoji} {currentGuide.simpleTitle}
-              </div>
-              <p className="mt-0.5 text-xs text-slate-300">
-                {currentGuide.whatYouDoHere}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-              {currentGuide.threeEasySteps.map((step, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-lg border border-slate-800 bg-slate-900/90 px-3 py-2 text-xs text-slate-200"
-                >
-                  {step}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Collapsible Step-by-Step Guide */}
+      {showGuide && (
+        <div className="mt-3 border-t border-white/[0.08] pt-3 space-y-2.5">
+          <p className="text-xs text-slate-300 lg:hidden">
+            {currentGuide.whatYouDoHere}
+          </p>
+          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+            {currentGuide.threeEasySteps.map((step, idx) => (
+              <div
+                key={idx}
+                className="flex items-start gap-2.5 rounded-xl border border-white/[0.07] bg-[#090b10]/90 px-3 py-2.5 text-xs text-slate-300"
+              >
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-orange-500/30 bg-orange-500/15 font-mono text-[10px] font-bold text-orange-300">
+                  {idx + 1}
+                </span>
+                <span className="leading-relaxed">{step}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default OwnerBeginnerGuideBar;
-

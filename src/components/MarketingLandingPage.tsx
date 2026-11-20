@@ -202,30 +202,30 @@ export default function MarketingLandingPage() {
     liveDemos[0]?.domain || "orders.bellanapoli.com";
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen bg-[#090b10] text-slate-100 selection:bg-orange-500 selection:text-white">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#090b10]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/20">
-              <UtensilsCrossed className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/20">
+              <UtensilsCrossed className="h-4 w-4" />
             </div>
             <div>
-              <span className="text-base font-extrabold tracking-tight text-white">
+              <span className="text-base font-bold tracking-tight text-white">
                 Platerift
               </span>
-              <span className="ml-2 hidden sm:inline-block rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-300">
-                For Restaurant Owners
+              <span className="ml-2 hidden sm:inline-block rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-orange-300">
+                Hospitality OS
               </span>
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-300">
+          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-400">
             <a href="#problems-solved" className="hover:text-white transition">
-              How We Solve Your Problems
+              Solutions
             </a>
             <a href="#owner-ai" className="hover:text-white transition">
-              Owner AI Agent
+              Owner AI
             </a>
             <a href="#how-it-works" className="hover:text-white transition">
               How It Works
@@ -238,14 +238,14 @@ export default function MarketingLandingPage() {
           <div className="flex items-center gap-2.5">
             <Link
               href={`/dashboard/${encodeURIComponent(primaryDemoDomain)}`}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-orange-500/40 hover:text-white transition"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#0f131b] px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-orange-500/40 hover:text-white transition"
             >
               <LayoutDashboard className="h-3.5 w-3.5 text-orange-400" />
               Try Owner Portal
             </Link>
             <Link
               href="/admin"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-orange-500/25 hover:from-orange-600 hover:to-rose-700 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3.5 py-2 text-xs font-semibold text-white shadow-lg shadow-orange-500/25 hover:from-orange-600 hover:to-rose-700 transition"
             >
               <span>Platform Admin</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -255,94 +255,99 @@ export default function MarketingLandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden border-b border-slate-900 pt-12 pb-16 sm:pt-20 sm:pb-24">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-500/15 via-slate-950 to-slate-950" />
+      <section className="relative overflow-hidden border-b border-white/[0.06] pt-14 pb-16 sm:pt-22 sm:pb-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-500/15 via-[#090b10] to-[#090b10]" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1.5 text-xs font-semibold text-orange-300">
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1.5 text-xs font-medium text-orange-300">
             <Sparkles className="h-3.5 w-3.5" />
-            Built for Independent Restaurants, Multi-Unit Groups & Food Trucks
+            Built for Independent Restaurants, Multi-Unit Groups &amp; Food
+            Trucks
           </div>
 
-          <h1 className="mx-auto mt-6 max-w-4xl text-3xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl leading-[1.12]">
+          <h1 className="mx-auto mt-6 max-w-4xl text-3xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl leading-[1.1]">
             Stop Paying 30% Commissions.{" "}
-            <span className="bg-gradient-to-r from-orange-400 via-amber-300 to-rose-400 bg-clip-text text-transparent">
-              Own Your Orders, Kitchen & Guests.
+            <span className="font-serif italic font-medium bg-gradient-to-r from-orange-300 via-amber-200 to-rose-300 bg-clip-text text-transparent">
+              Own Your Orders, Kitchen &amp; Guests.
             </span>
           </h1>
 
-          <p className="mx-auto mt-5 max-w-2xl text-sm sm:text-base text-slate-300 leading-relaxed">
-            Platerift gives your restaurant its own custom-domain ordering
-            storefront, smart kitchen throttling, real-time ingredient &amp;
-            food-cost tracking, DoorDash Drive dispatch, Square/Clover POS sync,
-            and an{" "}
-            <strong className="text-white">Owner AI Co-Pilot</strong> that runs
-            your dashboard tasks on command.
+          <p className="mx-auto mt-5 max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed">
+            Launch a custom-domain ordering storefront with smart kitchen
+            throttling, ingredient &amp; food-cost tracking, DoorDash Drive
+            dispatch, Square &amp; Clover POS sync, and an{" "}
+            <strong className="font-semibold text-white">
+              Owner AI Co-Pilot
+            </strong>{" "}
+            that executes operational tasks on command.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={`/dashboard/${encodeURIComponent(primaryDemoDomain)}`}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-orange-500/25 hover:from-orange-600 hover:to-rose-700 transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-orange-500/25 hover:from-orange-600 hover:to-rose-700 transition"
             >
               <LayoutDashboard className="h-4 w-4" />
               Explore Live Owner Dashboard
             </Link>
             <Link
               href={`/store/${encodeURIComponent(primaryDemoDomain)}`}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/90 px-6 py-3.5 text-sm font-bold text-slate-100 hover:border-slate-500 hover:bg-slate-800 transition"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-[#0f131b] px-6 py-3.5 text-sm font-semibold text-slate-100 hover:border-white/30 hover:bg-white/[0.06] transition"
             >
               <Store className="h-4 w-4 text-emerald-400" />
-              View Sample Customer Storefront
+              View Sample Storefront
             </Link>
+          </div>
+
+          <div className="mt-4">
             <Link
               href="/admin"
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-950 px-5 py-3.5 text-sm font-semibold text-slate-300 hover:border-orange-500/40 hover:text-white transition"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-orange-300 transition"
             >
-              Onboard a New Restaurant
-              <ArrowRight className="h-4 w-4" />
+              <span>Or onboard a new restaurant in Platform Admin</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
           {/* Value Strip */}
           <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 text-left">
-            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4">
-              <div className="text-xs font-semibold text-slate-400">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b]/90 p-4">
+              <div className="text-xs font-medium text-slate-400">
                 Commission Fees
               </div>
-              <div className="mt-1 text-2xl font-extrabold text-emerald-400">
+              <div className="mt-1 text-2xl font-bold tabular-nums text-emerald-400">
                 0%
               </div>
               <div className="mt-0.5 text-[11px] text-slate-400">
-                100% direct payouts to your bank
+                Direct payouts to your bank
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4">
-              <div className="text-xs font-semibold text-slate-400">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b]/90 p-4">
+              <div className="text-xs font-medium text-slate-400">
                 Payment Gateways
               </div>
-              <div className="mt-1 text-2xl font-extrabold text-white">
+              <div className="mt-1 text-2xl font-bold tabular-nums text-white">
                 4 Native
               </div>
               <div className="mt-0.5 text-[11px] text-slate-400">
                 Stripe, PayPal, Square &amp; Clover
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4">
-              <div className="text-xs font-semibold text-slate-400">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b]/90 p-4">
+              <div className="text-xs font-medium text-slate-400">
                 AI Automation
               </div>
-              <div className="mt-1 text-2xl font-extrabold text-orange-400">
+              <div className="mt-1 text-2xl font-bold tabular-nums text-orange-400">
                 3 Agents
               </div>
               <div className="mt-0.5 text-[11px] text-slate-400">
                 Owner Co-Pilot, Web &amp; Phone AI
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4">
-              <div className="text-xs font-semibold text-slate-400">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b]/90 p-4">
+              <div className="text-xs font-medium text-slate-400">
                 Setup Time
               </div>
-              <div className="mt-1 text-2xl font-extrabold text-sky-400">
+              <div className="mt-1 text-2xl font-bold tabular-nums text-sky-400">
                 60 Sec
               </div>
               <div className="mt-0.5 text-[11px] text-slate-400">
@@ -359,32 +364,31 @@ export default function MarketingLandingPage() {
         className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20"
       >
         <div className="max-w-3xl">
-          <span className="text-xs font-bold uppercase tracking-wider text-orange-400">
-            Problem → Solution Breakdown
+          <span className="text-xs font-semibold uppercase tracking-wider text-orange-400">
+            Problem → Solution
           </span>
-          <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-4xl">
-            How Platerift Solves the 6 Biggest Headaches in Running a Restaurant
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-4xl">
+            How Platerift Eliminates the 6 Biggest Restaurant Bottlenecks
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-400">
-            Instead of stitching together 7 disconnected tools, every module in
-            Platerift is engineered to eliminate a specific profit leak or
-            operational bottleneck.
+            Replace disconnected tablets, manual POS re-entry, and 30%
+            marketplace fees with one cohesive operating system.
           </p>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {PROBLEMS_AND_SOLUTIONS.map((item) => {
             const Icon = item.icon;
             return (
               <div
                 key={item.problemTag}
-                className="flex flex-col justify-between rounded-3xl border border-slate-800/90 bg-slate-900/60 p-6 shadow-xl transition hover:border-slate-700"
+                className="flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#0f131b]/90 p-6 shadow-xl transition hover:-translate-y-0.5 hover:border-orange-500/30"
               >
                 <div className="space-y-4">
-                  {/* Problem Header */}
+                  {/* Card Header */}
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${item.badgeTone}`}
+                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${item.badgeTone}`}
                     >
                       {item.problemTag}
                     </span>
@@ -395,36 +399,34 @@ export default function MarketingLandingPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-rose-500/20 bg-rose-950/20 p-3.5">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-rose-300">
-                      The Restaurant Pain Point
+                  {/* Pain point callout (clean border-left typography, zero double box) */}
+                  <div className="border-l-2 border-rose-500/45 pl-3 space-y-1">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-300/90">
+                      Before: {item.problemTitle}
                     </div>
-                    <h3 className="mt-1 text-sm font-bold text-white">
-                      {item.problemTitle}
-                    </h3>
-                    <p className="mt-1 text-xs text-slate-300 leading-relaxed">
+                    <p className="text-xs text-slate-400 leading-relaxed">
                       {item.problemDesc}
                     </p>
                   </div>
 
-                  {/* Solution Block */}
-                  <div className="rounded-2xl border border-emerald-500/25 bg-emerald-950/15 p-3.5">
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                      The Platerift Solution
+                  {/* Solution */}
+                  <div className="border-t border-white/[0.06] pt-3.5 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      With Platerift
                     </div>
-                    <h4 className="mt-1 text-sm font-bold text-white">
+                    <h3 className="text-sm font-bold text-white leading-snug">
                       {item.solutionTitle}
-                    </h4>
-                    <p className="mt-1 text-xs text-slate-300 leading-relaxed">
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
                       {item.solutionDesc}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between border-t border-slate-800/80 pt-3.5 text-xs">
-                  <span className="font-semibold text-slate-400">Impact:</span>
-                  <span className="font-bold text-emerald-400">
+                <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-3.5 text-xs">
+                  <span className="font-medium text-slate-400">Impact</span>
+                  <span className="font-semibold text-emerald-400">
                     {item.metrics}
                   </span>
                 </div>
@@ -437,7 +439,7 @@ export default function MarketingLandingPage() {
       {/* Spotlight Section: Owner AI Agent + Customer AI Agents */}
       <section
         id="owner-ai"
-        className="border-y border-slate-900 bg-gradient-to-b from-slate-900/60 to-slate-950 py-16 sm:py-20"
+        className="border-y border-white/[0.06] bg-gradient-to-b from-[#0f131b]/70 to-[#090b10] py-16 sm:py-20"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-center">
@@ -446,19 +448,19 @@ export default function MarketingLandingPage() {
                 <Bot className="h-3.5 w-3.5" />
                 Hands-Free Restaurant Management
               </div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-4xl">
+              <h2 className="text-2xl font-bold tracking-tight text-white sm:text-4xl">
                 Meet Your Built-In{" "}
                 <span className="text-orange-400">Owner AI Agent</span>
               </h2>
               <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-                You shouldn&apos;t need to click through 15 settings tabs while
-                expediting on the line. Just ask your{" "}
+                Manage rush service without digging through back-office menus.
+                Tell your{" "}
                 <strong className="text-white">Platerift Owner AI Agent</strong>{" "}
-                by voice or text, and it executes the exact task on your live
-                dashboard immediately.
+                what needs to happen by voice or chat and it updates live state
+                immediately.
               </p>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-xs">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 text-xs">
                 {[
                   '"Start preparing all confirmed orders"',
                   '"86 the Truffle Mushroom Pizza"',
@@ -469,7 +471,7 @@ export default function MarketingLandingPage() {
                 ].map((cmd) => (
                   <div
                     key={cmd}
-                    className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/90 px-3.5 py-2.5 font-mono text-slate-200"
+                    className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0f131b] px-3.5 py-2.5 font-mono text-slate-200"
                   >
                     <Zap className="h-3.5 w-3.5 shrink-0 text-orange-400" />
                     <span>{cmd}</span>
@@ -480,9 +482,9 @@ export default function MarketingLandingPage() {
               <div className="pt-2">
                 <Link
                   href={`/dashboard/${encodeURIComponent(primaryDemoDomain)}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-xs font-bold text-white hover:bg-orange-600 transition"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-3 text-xs font-semibold text-white shadow-lg shadow-orange-500/20 hover:from-orange-600 hover:to-rose-700 transition"
                 >
-                  Test the Owner AI Agent Live
+                  Test Owner AI Agent Live
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -490,9 +492,9 @@ export default function MarketingLandingPage() {
 
             {/* Interactive Preview Card of the 3 AI Agents */}
             <div className="lg:col-span-6 grid grid-cols-1 gap-4">
-              <div className="rounded-3xl border border-orange-500/30 bg-slate-900/90 p-5 shadow-2xl">
+              <div className="rounded-2xl border border-orange-500/30 bg-[#0f131b] p-5 shadow-2xl">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white">
                     <Bot className="h-5 w-5" />
                   </div>
                   <div>
@@ -500,60 +502,60 @@ export default function MarketingLandingPage() {
                       <h3 className="text-sm font-bold text-white">
                         1. Owner Portal AI Co-Pilot
                       </h3>
-                      <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
                         Back-of-House
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-400 mt-0.5">
                       Advances kitchen tickets, updates prices, 86s items,
-                      restocks inventory, updates hours, and sends SMS/email
+                      restocks inventory, adjusts hours, and sends SMS/email
                       promos.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-bold text-white">
-                        2. Storefront AI Menu &amp; Ordering Concierge
+                        2. Storefront AI Menu Concierge
                       </h3>
-                      <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300">
-                        Front-of-House Web
+                      <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold text-sky-300">
+                        Web Ordering
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400">
-                      Answers guest allergy/dietary questions, recommends
-                      popular pairings, and adds dishes directly to the
-                      customer&apos;s cart.
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Answers guest allergy and dietary questions, recommends
+                      popular pairings, and builds the customer&apos;s bag
+                      directly.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white">
                     <PhoneCall className="h-5 w-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-bold text-white">
-                        3. Vapi 24/7 Inbound Phone Ordering AI
+                        3. Vapi 24/7 Inbound Phone AI
                       </h3>
-                      <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-bold text-purple-300">
-                        Phone Line
+                      <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[10px] font-semibold text-purple-300">
+                        Voice Line
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400">
-                      Answers inbound phone calls using your live menu and
-                      operating hours, creates tickets in your kitchen, and
-                      texts the caller a payment link.
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Answers inbound calls using live menu availability and
+                      operating hours, injects tickets into KDS, and texts a
+                      checkout link.
                     </p>
                   </div>
                 </div>
@@ -569,21 +571,21 @@ export default function MarketingLandingPage() {
         className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20"
       >
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-xs font-bold uppercase tracking-wider text-orange-400">
-            Simple Setup
+          <span className="text-xs font-semibold uppercase tracking-wider text-orange-400">
+            Simple Onboarding
           </span>
-          <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
             From Sign-Up to Taking Direct Orders in 3 Steps
           </h2>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
           {WORKFLOW_STEPS.map((item) => (
             <div
               key={item.step}
-              className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6"
+              className="rounded-2xl border border-white/[0.08] bg-[#0f131b]/90 p-6"
             >
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/15 border border-orange-500/30 font-mono text-xs font-extrabold text-orange-300">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500/15 border border-orange-500/30 font-mono text-xs font-bold text-orange-300">
                 {item.step}
               </span>
               <h3 className="mt-4 text-base font-bold text-white">
@@ -600,27 +602,27 @@ export default function MarketingLandingPage() {
       {/* Interactive Live Restaurant Demos */}
       <section
         id="live-demos"
-        className="border-t border-slate-900 bg-slate-900/30 py-16 sm:py-20"
+        className="border-t border-white/[0.06] bg-[#0c0f16]/80 py-16 sm:py-20"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                Try It Right Now
+              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                Live Environments
               </span>
-              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+              <h2 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
                 Explore Live Demo Restaurants on Platerift
               </h2>
               <p className="mt-2 text-xs sm:text-sm text-slate-400">
-                Test both sides of the platform: place an order on the customer
-                storefront or manage operations inside the Owner Portal.
+                Test both sides of the platform: order on a branded storefront
+                or run live service in the Owner Portal.
               </p>
             </div>
             <Link
               href="/admin"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#0f131b] px-4 py-2.5 text-xs font-semibold text-white hover:border-white/25 transition"
             >
-              Open Super Admin Provisioning Console
+              Open Super Admin Console
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -629,14 +631,16 @@ export default function MarketingLandingPage() {
             {liveDemos.map((demo) => (
               <div
                 key={demo.slug}
-                className="flex flex-col justify-between rounded-3xl border border-slate-800 bg-slate-950 p-6 shadow-xl"
+                className="flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#0f131b] p-6 shadow-xl transition hover:-translate-y-0.5 hover:border-white/[0.16]"
               >
                 <div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-3xl">{demo.emoji}</span>
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-[#090b10] text-2xl">
+                      {demo.emoji}
+                    </span>
                     <Link
                       href={`/?domain=${encodeURIComponent(demo.domain)}`}
-                      className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/20 transition"
+                      className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-mono text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/20 transition"
                       title={`Launch custom domain storefront: ${demo.domain}`}
                     >
                       <Globe className="h-3 w-3" />
@@ -648,9 +652,9 @@ export default function MarketingLandingPage() {
                   </h3>
                   <p className="mt-1 text-xs text-slate-400">{demo.cuisine}</p>
                   <p className="mt-1 font-mono text-[11px] text-sky-400">
-                    Platerift Host: {demo.subdomain}
+                    Host: {demo.subdomain}
                   </p>
-                  <p className="mt-3 rounded-xl border border-slate-800/90 bg-slate-900/70 px-3 py-2 text-[11px] text-slate-300">
+                  <p className="mt-3 rounded-xl border border-white/[0.07] bg-[#090b10] px-3 py-2 text-[11px] text-slate-300">
                     {demo.highlight}
                   </p>
                 </div>
@@ -658,14 +662,14 @@ export default function MarketingLandingPage() {
                 <div className="mt-6 grid grid-cols-2 gap-2.5">
                   <Link
                     href={`/dashboard/${encodeURIComponent(demo.domain)}`}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-2.5 text-xs font-bold text-white hover:from-orange-600 hover:to-rose-700 transition"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-2.5 text-xs font-semibold text-white hover:from-orange-600 hover:to-rose-700 transition"
                   >
                     <LayoutDashboard className="h-3.5 w-3.5" />
                     Owner Portal
                   </Link>
                   <Link
                     href={`/store/${encodeURIComponent(demo.domain)}`}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-xs font-bold text-slate-200 hover:border-emerald-500/50 hover:text-white transition"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#090b10] px-3 py-2.5 text-xs font-semibold text-slate-200 hover:border-emerald-500/50 hover:text-white transition"
                   >
                     <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
                     Storefront
@@ -678,29 +682,29 @@ export default function MarketingLandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-10">
+      <footer className="border-t border-white/[0.06] bg-[#090b10] py-10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-rose-600 text-white">
               <UtensilsCrossed className="h-3.5 w-3.5" />
             </div>
             <span className="font-bold text-slate-300">Platerift</span>
-            <span>— All-in-One Direct Ordering &amp; AI Operations Platform</span>
+            <span>— Direct Ordering &amp; AI Hospitality Operations</span>
           </div>
           <div className="flex items-center gap-5 text-slate-400">
             <Link
               href={`/dashboard/${encodeURIComponent(primaryDemoDomain)}`}
-              className="hover:text-white"
+              className="hover:text-white transition"
             >
               Owner Portal Demo
             </Link>
             <Link
               href={`/store/${encodeURIComponent(primaryDemoDomain)}`}
-              className="hover:text-white"
+              className="hover:text-white transition"
             >
               Storefront Demo
             </Link>
-            <Link href="/admin" className="hover:text-white">
+            <Link href="/admin" className="hover:text-white transition">
               Super Admin Console
             </Link>
           </div>

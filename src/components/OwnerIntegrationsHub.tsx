@@ -6,10 +6,14 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  CreditCard,
+  Layers,
   Lock,
   PhoneCall,
+  Plug,
   RefreshCw,
   Save,
+  Settings2,
   ShieldCheck,
   Sparkles,
   Truck,
@@ -164,45 +168,45 @@ export function OwnerIntegrationsHub({
   return (
     <div className="space-y-6">
       {/* Top Plain-English Banner + Summary Roll */}
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 space-y-5">
+      <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-5 sm:p-6 space-y-5">
         {/* Platform Super Admin Provisioning Status Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 px-4 py-3 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/25 bg-emerald-950/20 px-4 py-2.5 text-xs">
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
             <span className="text-slate-200">
               <strong className="text-emerald-300">
-                Platform Super Admin Integration Status:
+                Platform Integration Entitlement:
               </strong>{" "}
-              {unlockedByPlatformCount} of 4 integrations are configured by
-              Platform Admin and unlocked for{" "}
-              <strong className="text-white">{restaurant.name}</strong>.
+              {unlockedByPlatformCount} of 4 integrations are configured and
+              unlocked for <strong className="text-white">{restaurant.name}</strong>.
             </span>
           </div>
           <Link
             href="/admin"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 text-[11px] font-bold text-orange-300 hover:bg-orange-500/25"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/35 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-300 hover:bg-orange-500/20 transition"
           >
-            ⚙️ Manage Master Setup in Super Admin →
+            <Settings2 className="h-3.5 w-3.5" />
+            Manage Master Setup in Admin →
           </Link>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-[11px] font-semibold text-emerald-300">
               <Sparkles className="h-3.5 w-3.5" />
-              Plug & Play Kitchen Apps • No Coding Needed
+              Connected Operations Suite
             </span>
-            <h2 className="mt-2 text-xl font-black text-white">
-              🔌 Connect DoorDash Drivers, Square, Clover & Vapi Phone AI
+            <h2 className="mt-2 flex items-center gap-2 text-xl font-bold tracking-tight text-white">
+              <Plug className="h-5 w-5 text-orange-400" />
+              <span>DoorDash Drive, Square POS, Clover KDS &amp; Vapi AI</span>
             </h2>
-            <p className="text-xs text-slate-400 max-w-3xl mt-1">
-              Turn on any of the 4 cards below in 1 click. Every app starts in{" "}
+            <p className="text-xs text-slate-400 max-w-3xl mt-1 leading-relaxed">
+              Toggle on any unlocked integration below. Each connector supports{" "}
               <strong className="text-slate-200">
                 Practice / Sandbox Mode
               </strong>{" "}
-              so you can test calling a DoorDash driver, syncing your Square or
-              Clover register, or receiving an AI phone order right now without
-              risking real money.
+              so you can test courier dispatch, POS menu sync, and AI phone
+              orders before switching to production credentials.
             </p>
           </div>
 
@@ -210,7 +214,7 @@ export function OwnerIntegrationsHub({
             type="button"
             disabled={saving}
             onClick={() => onSaveIntegrations(config)}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-3 text-xs font-bold text-slate-950 shadow-lg hover:brightness-110 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-orange-500/20 hover:from-orange-600 hover:to-rose-700 transition disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {saving ? "Saving Apps..." : "Save All App Settings"}
@@ -219,15 +223,16 @@ export function OwnerIntegrationsHub({
 
         {/* 4-Card Summary Status Roll */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 flex items-center justify-between">
+          <div className="rounded-xl border border-white/[0.08] bg-[#090b10] p-4 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-slate-400">
-                🚗 1. DoorDash Driver
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                <Truck className="h-3.5 w-3.5 text-rose-400" />
+                <span>DoorDash Drive</span>
               </div>
-              <div className="mt-1 text-sm font-black text-white">
-                {config.doordashDrive.enabled ? "Turned ON" : "Turned OFF"}
+              <div className="mt-1 text-sm font-bold text-white">
+                {config.doordashDrive.enabled ? "Active" : "Paused"}
               </div>
-              <div className="text-[11px] text-emerald-300 mt-0.5">
+              <div className="text-[11px] tabular-nums text-emerald-300 mt-0.5">
                 0% commission • Flat $
                 {config.doordashDrive.flatDasherFeeEstimate.toFixed(2)}/trip
               </div>
@@ -239,19 +244,20 @@ export function OwnerIntegrationsHub({
                   : "bg-slate-800 text-slate-400"
               }`}
             >
-              {config.doordashDrive.mode === "live" ? "LIVE" : "PRACTICE"}
+              {config.doordashDrive.mode === "live" ? "LIVE" : "SANDBOX"}
             </span>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 flex items-center justify-between">
+          <div className="rounded-xl border border-white/[0.08] bg-[#090b10] p-4 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-slate-400">
-                ⬛ 2. Square POS & Card
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                <CreditCard className="h-3.5 w-3.5 text-sky-400" />
+                <span>Square POS &amp; Card</span>
               </div>
-              <div className="mt-1 text-sm font-black text-white">
-                {config.square.enabled ? "Connected & Syncing" : "Turned OFF"}
+              <div className="mt-1 text-sm font-bold text-white">
+                {config.square.enabled ? "Connected" : "Paused"}
               </div>
-              <div className="text-[11px] text-sky-300 mt-0.5">
+              <div className="text-[11px] tabular-nums text-sky-300 mt-0.5">
                 {menuItems.length} dishes synced
               </div>
             </div>
@@ -266,15 +272,16 @@ export function OwnerIntegrationsHub({
             </span>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 flex items-center justify-between">
+          <div className="rounded-xl border border-white/[0.08] bg-[#090b10] p-4 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-slate-400">
-                🍀 3. Clover POS & Printer
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                <Layers className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Clover POS &amp; KDS</span>
               </div>
-              <div className="mt-1 text-sm font-black text-white">
-                {config.clover.enabled ? "Connected & Syncing" : "Turned OFF"}
+              <div className="mt-1 text-sm font-bold text-white">
+                {config.clover.enabled ? "Connected" : "Paused"}
               </div>
-              <div className="text-[11px] text-emerald-300 mt-0.5">
+              <div className="text-[11px] tabular-nums text-emerald-300 mt-0.5">
                 {menuItems.length} dishes synced
               </div>
             </div>
@@ -289,16 +296,17 @@ export function OwnerIntegrationsHub({
             </span>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 flex items-center justify-between">
+          <div className="rounded-xl border border-white/[0.08] bg-[#090b10] p-4 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-slate-400">
-                📞 4. Vapi AI Phone Ordering
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                <PhoneCall className="h-3.5 w-3.5 text-amber-400" />
+                <span>Vapi Voice AI</span>
               </div>
-              <div className="mt-1 text-sm font-black text-white">
-                {config.vapi.enabled ? "Answering Calls 24/7" : "Turned OFF"}
+              <div className="mt-1 text-sm font-bold text-white">
+                {config.vapi.enabled ? "Answering 24/7" : "Paused"}
               </div>
-              <div className="text-[11px] text-amber-300 mt-0.5">
-                {config.vapi.totalVoiceOrdersCreated} phone orders taken (
+              <div className="text-[11px] tabular-nums text-amber-300 mt-0.5">
+                {config.vapi.totalVoiceOrdersCreated} orders (
                 {config.vapi.totalVoiceCallsHandled} calls)
               </div>
             </div>
@@ -309,7 +317,7 @@ export function OwnerIntegrationsHub({
                   : "bg-slate-800 text-slate-400"
               }`}
             >
-              {config.vapi.mode === "live" ? "LIVE" : "PRACTICE"}
+              {config.vapi.mode === "live" ? "LIVE" : "SANDBOX"}
             </span>
           </div>
         </div>
@@ -321,18 +329,18 @@ export function OwnerIntegrationsHub({
             CARD 1: DOORDASH DRIVE API (WHITE-LABEL DASHER DISPATCH)
            ========================================================= */}
         <div
-          className={`rounded-3xl border p-6 flex flex-col justify-between space-y-5 ${
+          className={`rounded-2xl border p-6 flex flex-col justify-between space-y-5 ${
             isDoorDashUnlockedByPlatform
-              ? "border-slate-800 bg-slate-900"
-              : "border-amber-500/30 bg-slate-900/60 opacity-85"
+              ? "border-white/[0.08] bg-[#0f131b]"
+              : "border-amber-500/30 bg-[#0f131b]/70 opacity-85"
           }`}
         >
           {!isDoorDashUnlockedByPlatform && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/40 bg-amber-950/30 p-3 text-xs text-amber-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/35 bg-amber-950/30 p-3 text-xs text-amber-200">
               <span className="flex items-center gap-1.5 font-semibold">
                 <Lock className="h-3.5 w-3.5 text-amber-400" />
-                🔒 Locked until Platform Super Admin finishes DoorDash Drive
-                setup & enables it for {restaurant.name}.
+                Locked until Platform Super Admin finishes DoorDash Drive setup
+                &amp; enables it for {restaurant.name}.
               </span>
               <Link
                 href="/admin"
@@ -352,22 +360,21 @@ export function OwnerIntegrationsHub({
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/15 border border-rose-500/30 text-2xl">
-                  🚗
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400">
+                  <Truck className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-white">
-                      1. DoorDash Driver Delivery (DoorDash Drive)
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-bold text-white">
+                      DoorDash Drive Delivery
                     </h3>
-                    <span className="rounded-full bg-rose-500/20 border border-rose-500/40 px-2.5 py-0.5 text-[10px] font-bold text-rose-300">
+                    <span className="rounded-full bg-rose-500/15 border border-rose-500/35 px-2.5 py-0.5 text-[10px] font-semibold text-rose-300">
                       0% Commission
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Don&apos;t have your own delivery bike or car? Call a local
-                    DoorDash driver to deliver orders placed on your website for
-                    a flat fee!
+                    Dispatch local DoorDash couriers on direct website delivery
+                    orders for a transparent flat dispatch fee.
                   </p>
                 </div>
               </div>
@@ -713,18 +720,18 @@ export function OwnerIntegrationsHub({
             CARD 2: SQUARE POS & PAYMENTS API
            ========================================================= */}
         <div
-          className={`rounded-3xl border p-6 flex flex-col justify-between space-y-5 ${
+          className={`rounded-2xl border p-6 flex flex-col justify-between space-y-5 ${
             isSquareUnlockedByPlatform
-              ? "border-slate-800 bg-slate-900"
-              : "border-amber-500/30 bg-slate-900/60 opacity-85"
+              ? "border-white/[0.08] bg-[#0f131b]"
+              : "border-amber-500/30 bg-[#0f131b]/70 opacity-85"
           }`}
         >
           {!isSquareUnlockedByPlatform && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/40 bg-amber-950/30 p-3 text-xs text-amber-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/35 bg-amber-950/30 p-3 text-xs text-amber-200">
               <span className="flex items-center gap-1.5 font-semibold">
                 <Lock className="h-3.5 w-3.5 text-amber-400" />
-                🔒 Locked until Platform Super Admin finishes Square POS setup &
-                enables it for {restaurant.name}.
+                Locked until Platform Super Admin finishes Square POS setup
+                &amp; enables it for {restaurant.name}.
               </span>
               <Link
                 href="/admin"
@@ -744,21 +751,21 @@ export function OwnerIntegrationsHub({
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/15 border border-sky-500/30 text-2xl">
-                  ⬛
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400">
+                  <CreditCard className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-white">
-                      2. Square POS & Card Reader
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-bold text-white">
+                      Square POS &amp; Card Reader
                     </h3>
-                    <span className="rounded-full bg-sky-500/20 border border-sky-500/40 px-2.5 py-0.5 text-[10px] font-bold text-sky-300">
+                    <span className="rounded-full bg-sky-500/15 border border-sky-500/35 px-2.5 py-0.5 text-[10px] font-semibold text-sky-300">
                       2-Way Sync
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Use Square at your counter or food truck window? Sync your
-                    menu, portion sizes, sides & Sold-Out dishes automatically!
+                    Sync catalog items, portion variants, sides &amp; Sold-Out
+                    counts automatically with Square POS and KDS.
                   </p>
                 </div>
               </div>
@@ -1089,18 +1096,18 @@ export function OwnerIntegrationsHub({
             CARD 3: CLOVER POS & KITCHEN PRINTER API
            ========================================================= */}
         <div
-          className={`rounded-3xl border p-6 flex flex-col justify-between space-y-5 ${
+          className={`rounded-2xl border p-6 flex flex-col justify-between space-y-5 ${
             isCloverUnlockedByPlatform
-              ? "border-slate-800 bg-slate-900"
-              : "border-amber-500/30 bg-slate-900/60 opacity-85"
+              ? "border-white/[0.08] bg-[#0f131b]"
+              : "border-amber-500/30 bg-[#0f131b]/70 opacity-85"
           }`}
         >
           {!isCloverUnlockedByPlatform && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/40 bg-amber-950/30 p-3 text-xs text-amber-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/35 bg-amber-950/30 p-3 text-xs text-amber-200">
               <span className="flex items-center gap-1.5 font-semibold">
                 <Lock className="h-3.5 w-3.5 text-amber-400" />
-                🔒 Locked until Platform Super Admin finishes Clover POS setup &
-                enables it for {restaurant.name}.
+                Locked until Platform Super Admin finishes Clover POS setup
+                &amp; enables it for {restaurant.name}.
               </span>
               <Link
                 href="/admin"
@@ -1120,21 +1127,21 @@ export function OwnerIntegrationsHub({
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-2xl">
-                  🍀
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                  <Layers className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-white">
-                      3. Clover POS & Kitchen Printer
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-bold text-white">
+                      Clover POS &amp; Kitchen Printer
                     </h3>
-                    <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                    <span className="rounded-full bg-emerald-500/15 border border-emerald-500/35 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300">
                       Kitchen Ticket Sync
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Have a Clover Station or Clover Flex on your counter? Print
-                    website orders straight to your Clover kitchen printer!
+                    Route website orders straight into your Clover Station or
+                    Flex kitchen printer via Atomic Orders API.
                   </p>
                 </div>
               </div>
@@ -1480,18 +1487,18 @@ export function OwnerIntegrationsHub({
             CARD 4: VAPI VOICE AI PHONE RECEPTIONIST & WEB VOICE CALLS
            ========================================================= */}
         <div
-          className={`rounded-3xl border p-6 flex flex-col justify-between space-y-5 ${
+          className={`rounded-2xl border p-6 flex flex-col justify-between space-y-5 ${
             isVapiUnlockedByPlatform
-              ? "border-slate-800 bg-slate-900"
-              : "border-amber-500/30 bg-slate-900/60 opacity-85"
+              ? "border-white/[0.08] bg-[#0f131b]"
+              : "border-amber-500/30 bg-[#0f131b]/70 opacity-85"
           }`}
         >
           {!isVapiUnlockedByPlatform && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/40 bg-amber-950/30 p-3 text-xs text-amber-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/35 bg-amber-950/30 p-3 text-xs text-amber-200">
               <span className="flex items-center gap-1.5 font-semibold">
                 <Lock className="h-3.5 w-3.5 text-amber-400" />
-                🔒 Locked until Platform Super Admin finishes Vapi Voice AI
-                setup & enables it for {restaurant.name}.
+                Locked until Platform Super Admin finishes Vapi Voice AI setup
+                &amp; enables it for {restaurant.name}.
               </span>
               <Link
                 href="/admin"
@@ -1511,22 +1518,22 @@ export function OwnerIntegrationsHub({
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-2xl">
-                  📞
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+                  <PhoneCall className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-white">
-                      4. Vapi AI Phone Ordering (24/7 Voice Receptionist)
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-bold text-white">
+                      Vapi AI Phone Ordering
                     </h3>
-                    <span className="rounded-full bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 text-[10px] font-bold text-amber-300">
+                    <span className="rounded-full bg-amber-500/15 border border-amber-500/35 px-2.5 py-0.5 text-[10px] font-semibold text-amber-300">
                       Answers Calls 24/7
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Too busy frying plantain or tending the Suya grill to answer
-                    the phone? Vapi AI answers calls, checks what pots are
-                    available, takes the order, and texts a payment link!
+                    AI voice receptionist answers calls during peak rush, checks
+                    live stock &amp; menu, creates tickets, and texts checkout
+                    links.
                   </p>
                 </div>
               </div>

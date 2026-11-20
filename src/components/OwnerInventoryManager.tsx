@@ -189,7 +189,7 @@ export function OwnerInventoryManager({
   >("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
-  const [showSimpleGuide, setShowSimpleGuide] = useState(true);
+  const [showSimpleGuide, setShowSimpleGuide] = useState(false);
 
   // New inventory item form state
   const [showNewItemForm, setShowNewItemForm] = useState(false);
@@ -656,30 +656,34 @@ export function OwnerInventoryManager({
       {/* ===================================================================== */}
       {/* HEADER BANNER WITH 1-CLICK NIGERIAN / AFRICAN SAMPLE PACK LOADER       */}
       {/* ===================================================================== */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/95 p-5 space-y-4">
+      <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-5 space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
-                🇳🇬 Easy Kitchen, Bukka & Food Truck Stock Cards
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+                <Package className="h-3 w-3" />
+                Kitchen &amp; Commissary Stock Control
               </span>
               <button
                 type="button"
                 onClick={() => setShowSimpleGuide(!showSimpleGuide)}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-950 px-2.5 py-0.5 text-[11px] font-medium text-slate-300 hover:text-white"
+                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-[#090b10] px-2.5 py-0.5 text-[11px] font-medium text-slate-300 hover:border-white/20 hover:text-white transition"
               >
                 <HelpCircle className="h-3 w-3 text-orange-400" />
-                {showSimpleGuide ? "Hide Simple Guide" : "Show How It Works"}
+                {showSimpleGuide ? "Hide Simple Guide" : "How Stock & Auto-86 Work"}
               </button>
             </div>
-            <h2 className="mt-2 text-xl font-bold text-white">
-              {restaurant.name} — Simple Kitchen Pots, Meat & Store Tracker
+            <h2 className="mt-2 text-xl font-bold tracking-tight text-white">
+              {restaurant.name} — Kitchen Prep &amp; Commissary Stock
             </h2>
-            <p className="mt-0.5 text-xs text-slate-300">
-              See what is remaining in your pots & coolers at a glance, refill
-              from your Main Store in 1 click, and automatically stop online
-              orders when **Jollof Rice, Asun, Egusi, Plantain (Dodo)** or
-              **Moi-Moi** finishes.
+            <p className="mt-0.5 text-xs text-slate-400">
+              Monitor live prep station and cooler levels, refill from your
+              commissary store in one click, and auto-pause online dishes when{" "}
+              <strong className="font-semibold text-slate-200">
+                Jollof Rice, Asun, Egusi, Plantain (Dodo)
+              </strong>{" "}
+              or <strong className="font-semibold text-slate-200">Moi-Moi</strong>{" "}
+              runs out.
             </p>
           </div>
 
@@ -691,16 +695,16 @@ export function OwnerInventoryManager({
                   e.target.value as RestaurantInventoryConfig["operationType"]
                 )
               }
-              className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:border-orange-500 focus:outline-none"
+              className="rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs font-semibold text-white focus:border-orange-500/60 focus:outline-none"
             >
               <option value="food_truck_commissary">
-                🚚 Food Truck / Suya & Jollof Van + Store
+                Food Truck / Mobile Line + Store
               </option>
               <option value="restaurant_kitchen">
-                🍲 Sit-Down Restaurant / Bukka Kitchen
+                Sit-Down Restaurant Kitchen
               </option>
               <option value="hybrid">
-                🎉 Restaurant + Party / Owambe Catering
+                Restaurant + Party / Catering
               </option>
             </select>
 
@@ -708,69 +712,88 @@ export function OwnerInventoryManager({
               type="button"
               disabled={saving}
               onClick={handleLoadNigerianSamplePack}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/25 transition disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition disabled:opacity-50"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              🇳🇬 Load Nigerian Food Examples
+              Load African Kitchen Pack
             </button>
 
             <button
               type="button"
               disabled={saving}
               onClick={handleRestockAllToPar}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500 px-3.5 py-2 text-xs font-bold text-white hover:bg-orange-600 transition shadow-lg shadow-orange-500/20 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3.5 py-2 text-xs font-semibold text-white hover:from-orange-600 hover:to-rose-700 transition shadow-lg shadow-orange-500/20 disabled:opacity-50"
             >
               <RefreshCw className="h-3.5 w-3.5" />
-              Refill All Pots to Full Target
+              Refill All Stock to Par
             </button>
           </div>
         </div>
 
         {/* ================================================================= */}
-        {/* MULTI-CARD ROW 1: 3 SIMPLE EXPLAINER CARDS (NIGERIAN EXAMPLES)     */}
+        {/* MULTI-CARD ROW 1: 3 SIMPLE EXPLAINER CARDS                        */}
         {/* ================================================================= */}
         {showSimpleGuide && (
           <div className="grid grid-cols-1 gap-3 pt-2 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
+            <div className="rounded-2xl border border-white/[0.07] bg-[#090b10]/90 p-4">
               <div className="flex items-center gap-2 text-xs font-bold text-orange-400">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500/20 text-xs font-extrabold">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500/20 text-[11px] font-bold">
                   1
                 </span>
-                <span>One Shared Pot Feeds Many Dishes</span>
+                <span>One Shared Prep Feeds Many Dishes</span>
               </div>
               <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-                Example: Your **Peppered Goat Meat (Asun)** and **Fried Plantain
-                (Dodo)** are shared across *Party Jollof Combo*, *Fried Rice
-                Special*, and *Swallow + Egusi*. When a customer buys a **Big
-                Family Tray (2×)**, 2 portions are deducted automatically.
+                Example: Your{" "}
+                <strong className="font-semibold text-white">
+                  Peppered Goat Meat (Asun)
+                </strong>{" "}
+                and{" "}
+                <strong className="font-semibold text-white">
+                  Fried Plantain (Dodo)
+                </strong>{" "}
+                are shared across <em>Party Jollof Combo</em>,{" "}
+                <em>Fried Rice Special</em>, and <em>Swallow + Egusi</em>.
+                When a guest buys a{" "}
+                <strong className="font-semibold text-white">
+                  Big Family Tray (2×)
+                </strong>
+                , 2 portions are deducted automatically.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
+            <div className="rounded-2xl border border-white/[0.07] bg-[#090b10]/90 p-4">
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-extrabold">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20 text-[11px] font-bold">
                   2
                 </span>
-                <span>Auto-Stop When Food Finishes (Auto-86)</span>
+                <span>Auto-86 When Stock Reaches Zero</span>
               </div>
               <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-                Example: If **Moi-Moi** or **Egusi Soup** reaches **0** during
-                lunch rush, the website immediately marks dishes using it as{" "}
-                <span className="text-rose-300 font-semibold">Sold Out</span> so
-                customers don&apos;t pay for food that has finished in the pot.
+                Example: If{" "}
+                <strong className="font-semibold text-white">Moi-Moi</strong> or{" "}
+                <strong className="font-semibold text-white">Egusi Soup</strong>{" "}
+                reaches <strong className="font-semibold text-white">0</strong>{" "}
+                during lunch rush, the website immediately marks dishes using it
+                as <span className="text-rose-300 font-semibold">Sold Out</span>{" "}
+                so guests never pay for depleted items.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
+            <div className="rounded-2xl border border-white/[0.07] bg-[#090b10]/90 p-4">
               <div className="flex items-center gap-2 text-xs font-bold text-sky-400">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/20 text-xs font-extrabold">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-500/20 text-[11px] font-bold">
                   3
                 </span>
-                <span>Main Store → Kitchen / Truck Refill</span>
+                <span>Store Backup → Kitchen Refill</span>
               </div>
               <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-                Example: Keep extra bags of rice, frozen goat meat, takeaway
-                packs & **12.5kg Cooking Gas** in your **Main Store**. Tap{" "}
+                Keep extra bags of rice, frozen goat meat, takeaway packs, and{" "}
+                <strong className="font-semibold text-white">
+                  12.5kg Cooking Gas
+                </strong>{" "}
+                in your{" "}
+                <strong className="font-semibold text-white">Main Store</strong>
+                . Tap{" "}
                 <span className="text-sky-300 font-semibold">
                   &quot;Refill from Store&quot;
                 </span>{" "}
@@ -785,12 +808,12 @@ export function OwnerInventoryManager({
       {/* MULTI-CARD ROW 2: 4 SIMPLE SUMMARY CARDS                              */}
       {/* ===================================================================== */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-emerald-500/30 bg-slate-900/90 p-4">
+        <div className="rounded-2xl border border-emerald-500/25 bg-[#0f131b] p-4">
           <div className="flex items-center justify-between text-xs font-semibold text-emerald-300">
-            <span>✅ Plenty in Kitchen</span>
+            <span>Healthy Kitchen Stock</span>
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
           </div>
-          <div className="mt-1.5 text-2xl font-extrabold font-mono text-white">
+          <div className="mt-1.5 text-2xl font-bold tabular-nums text-white">
             {healthyItems.length} Items Ready
           </div>
           <div className="mt-1 text-[11px] text-slate-400">
@@ -801,16 +824,16 @@ export function OwnerInventoryManager({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-amber-500/30 bg-slate-900/90 p-4">
+        <div className="rounded-2xl border border-amber-500/25 bg-[#0f131b] p-4">
           <div className="flex items-center justify-between text-xs font-semibold text-amber-300">
-            <span>⚠️ Running Low / Finished</span>
+            <span>Low / Depleted Alerts</span>
             <AlertTriangle className="h-4 w-4 text-amber-400" />
           </div>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold font-mono text-amber-300">
+          <div className="mt-1.5 flex items-baseline gap-2 tabular-nums">
+            <span className="text-2xl font-bold text-amber-300">
               {lowStockItems.length} Low
             </span>
-            <span className="text-sm font-bold font-mono text-rose-400">
+            <span className="text-sm font-semibold text-rose-400">
               • {depletedItems.length} Finished (0)
             </span>
           </div>
@@ -819,25 +842,25 @@ export function OwnerInventoryManager({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-sky-500/30 bg-slate-900/90 p-4">
+        <div className="rounded-2xl border border-sky-500/25 bg-[#0f131b] p-4">
           <div className="flex items-center justify-between text-xs font-semibold text-sky-300">
-            <span>🏭 Main Store / Freezer Backup</span>
+            <span>Main Store &amp; Freezer Backup</span>
             <Truck className="h-4 w-4 text-sky-400" />
           </div>
-          <div className="mt-1.5 text-2xl font-extrabold font-mono text-white">
+          <div className="mt-1.5 text-2xl font-bold tabular-nums text-white">
             ${totalCommissaryValue.toFixed(2)}
           </div>
           <div className="mt-1 text-[11px] text-slate-400">
-            Extra bags of rice, meat, gas & takeaway packs
+            Reserve bags of rice, meat, gas &amp; takeaway packs
           </div>
         </div>
 
-        <div className="rounded-2xl border border-rose-500/30 bg-slate-900/90 p-4">
+        <div className="rounded-2xl border border-rose-500/25 bg-[#0f131b] p-4">
           <div className="flex items-center justify-between text-xs font-semibold text-rose-300">
-            <span>🔥 Spoilage / Burnt / Leftovers</span>
+            <span>Recorded Waste &amp; Spoilage</span>
             <Flame className="h-4 w-4 text-rose-400" />
           </div>
-          <div className="mt-1.5 text-2xl font-extrabold font-mono text-rose-300">
+          <div className="mt-1.5 text-2xl font-bold tabular-nums text-rose-300">
             ${totalWasteLoss.toFixed(2)} Lost
           </div>
           <div className="mt-1 text-[11px] text-slate-400">
@@ -1694,15 +1717,22 @@ export function OwnerInventoryManager({
       {/* ===================================================================== */}
       {subTab === "cogs" && (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5">
-            <h3 className="text-base font-bold text-white">
-              💰 Simple Profit per Plate & Party Tray (2×) Margin Cards
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b] p-5">
+            <h3 className="flex items-center gap-2 text-base font-bold text-white">
+              <DollarSign className="h-4 w-4 text-emerald-400" />
+              Profit per Plate &amp; Party Tray (2×) Margin Cards
             </h3>
             <p className="mt-1 text-xs text-slate-400">
-              Every card shows how much it costs you to cook & pack one plate
-              (e.g., **Jollof + Asun + Dodo + Takeaway Pack**), how much profit
-              you keep in your pocket, and how much you make on a **Big /
-              Shareable (2×) Tray**.
+              Every card shows how much it costs to prep &amp; pack one plate
+              (e.g.{" "}
+              <strong className="font-semibold text-slate-200">
+                Jollof + Asun + Dodo + Takeaway Pack
+              </strong>
+              ), gross profit per dish, and margin on a{" "}
+              <strong className="font-semibold text-slate-200">
+                Big / Shareable (2×) Tray
+              </strong>
+              .
             </p>
           </div>
 
@@ -1950,13 +1980,28 @@ export function OwnerInventoryManager({
               className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/95 p-5 space-y-4"
             >
               <div>
-                <h3 className="text-base font-bold text-white">
-                  🚚 Morning Kitchen & Food Truck Opening Check Cards
+                <h3 className="flex items-center gap-2 text-base font-bold text-white">
+                  <ClipboardCheck className="h-4 w-4 text-orange-400" />
+                  Morning Kitchen &amp; Food Truck Opening Checklists
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-400">
-                  Make sure staff check the **12.5kg Cooking Gas cylinder**,
-                  **Generator diesel**, **Takeaway packs**, and **Stew/Egusi
-                  freshness** before opening.
+                  Ensure staff verify the{" "}
+                  <strong className="font-semibold text-slate-200">
+                    12.5kg Cooking Gas cylinder
+                  </strong>
+                  ,{" "}
+                  <strong className="font-semibold text-slate-200">
+                    Generator diesel
+                  </strong>
+                  ,{" "}
+                  <strong className="font-semibold text-slate-200">
+                    Takeaway packs
+                  </strong>
+                  , and{" "}
+                  <strong className="font-semibold text-slate-200">
+                    Stew/Egusi freshness
+                  </strong>{" "}
+                  before opening.
                 </p>
               </div>
 
@@ -1966,7 +2011,7 @@ export function OwnerInventoryManager({
                   value={newCheckLabel}
                   onChange={(e) => setNewCheckLabel(e.target.value)}
                   placeholder="e.g., Check Suya charcoal & Yaji spice..."
-                  className="sm:col-span-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"
+                  className="sm:col-span-2 rounded-xl border border-white/10 bg-[#090b10] px-3 py-2 text-xs text-white focus:border-orange-500/60 focus:outline-none"
                 />
                 <select
                   value={newCheckCategory}
@@ -1975,12 +2020,12 @@ export function OwnerInventoryManager({
                       e.target.value as ShiftLoadoutCheckItem["category"]
                     )
                   }
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white"
+                  className="rounded-xl border border-white/10 bg-[#090b10] px-2.5 py-2 text-xs text-white focus:border-orange-500/60 focus:outline-none"
                 >
-                  <option value="Kitchen Prep">🍲 Kitchen Prep</option>
-                  <option value="Packaging">📦 Takeaway Packs</option>
-                  <option value="Food Truck Ops">⛽ Gas & Truck</option>
-                  <option value="Safety & FIFO">❄️ Cooler & FIFO</option>
+                  <option value="Kitchen Prep">Kitchen Prep</option>
+                  <option value="Packaging">Takeaway Packs</option>
+                  <option value="Food Truck Ops">Gas &amp; Truck</option>
+                  <option value="Safety & FIFO">Cooler &amp; FIFO</option>
                 </select>
               </div>
 

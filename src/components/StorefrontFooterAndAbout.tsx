@@ -151,7 +151,7 @@ export function StorefrontAboutSection({
   return (
     <section
       id="about-section"
-      className="border-b border-zinc-900 bg-gradient-to-b from-[#0b0c10] via-[#0e1017] to-[#0b0c10] py-12 sm:py-16 px-4 sm:px-6"
+      className="border-t border-white/[0.06] bg-gradient-to-b from-[#090b10] via-[#0d1017] to-[#090b10] py-14 sm:py-16 px-4 sm:px-6"
     >
       <div className="max-w-7xl mx-auto space-y-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
@@ -364,12 +364,12 @@ export function StorefrontFooter({
   return (
     <footer
       id="contact-footer"
-      className="border-t border-zinc-800/90 bg-[#07080b] text-zinc-400 pb-24 lg:pb-10"
+      className="border-t border-white/[0.08] bg-[#07080d] text-zinc-400 pb-24 lg:pb-10"
     >
       {/* Top Policy Highlights Banner */}
-      <div className="border-b border-zinc-900 bg-zinc-950/60 px-4 sm:px-6 py-6">
+      <div className="border-b border-white/[0.06] bg-[#090b10]/70 px-4 sm:px-6 py-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-4 space-y-1">
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0f131b]/70 p-4 space-y-1">
             <div className="flex items-center gap-2 font-semibold text-white">
               <Clock className="h-4 w-4 shrink-0" style={{ color: brandColor }} />
               <span>Cancellation & Scheduling Policy</span>
@@ -560,7 +560,7 @@ export function StorefrontFooter({
                   href={`/store/${routeSlug}#provisioning-desk`}
                   className="text-zinc-300 hover:text-white transition"
                 >
-                  Provisioning Cart & Schedule
+                  Order Bag &amp; Schedule
                 </Link>
               </li>
               {navLinks
