@@ -10,11 +10,16 @@ import {
   syncPlatformSettingFromTurso,
   updatePlatformTwilioConfig,
 } from "@/lib/db";
+import { authorizePlatformAdmin } from "@/lib/session";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authz = authorizePlatformAdmin(req);
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     await hydrateFromTursoIfNeeded();
-    await syncPlatformSettingFromTurso("twilio_gateway");
     await syncPlatformSettingFromTurso("twilio_gateway");
     const config = getPlatformTwilioConfig();
     const recentSmsLogs = listAllPlatformSmsLogs(50);
@@ -33,6 +38,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authz = authorizePlatformAdmin(req);
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     await hydrateFromTursoIfNeeded();
     await syncPlatformSettingFromTurso("twilio_gateway");
     const body = await req.json();

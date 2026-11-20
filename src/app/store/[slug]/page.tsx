@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -50,6 +50,11 @@ import {
   SmsLog,
 } from "@/lib/types";
 import TenantAiChatbot from "@/components/TenantAiChatbot";
+import CheckoutPaymentGateway, {
+  type CheckoutGatewayType,
+  type CheckoutPaymentGatewayHandle,
+  type TokenizedPaymentResult,
+} from "@/components/CheckoutPaymentGateway";
 import {
   StorefrontAboutSection,
   StorefrontBrandLogo,
@@ -63,7 +68,13 @@ function formatSpacedBrand(name: string): string {
 
 export default function CustomerOrderingStorefront() {
   const params = useParams<{ slug: string }>();
-  const slug = params?.slug || "bella-napoli";
+  const rawSlug = params?.slug || "bella-napoli";
+  let slug = rawSlug;
+  try {
+    slug = decodeURIComponent(rawSlug);
+  } catch {
+    slug = rawSlug;
+  }
 
   const [restaurant, setRestaurant] = useState<RestaurantTenant | null>(null);
   const [platformIntegrations, setPlatformIntegrations] =
@@ -169,11 +180,24 @@ export default function CustomerOrderingStorefront() {
   const [customerPhone, setCustomerPhone] = useState("+1 (312) 555-0821");
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string>("");
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [promoFeedback, setPromoFeedback] = useState<{
+    valid: boolean;
+    message: string;
+  } | null>(null);
   const [tipPercent, setTipPercent] = useState(15);
   const [paymentMethod, setPaymentMethod] = useState<
     "stripe" | "paypal" | "square" | "clover"
   >("stripe");
+  const [paymentGateway, setPaymentGateway] =
+    useState<CheckoutGatewayType>("stripe");
+  useEffect(() => {
+    setPaymentMethod(paymentGateway === "apple_pay" ? "stripe" : paymentGateway);
+  }, [paymentGateway]);
+  const paymentGatewayRef = useRef<CheckoutPaymentGatewayHandle | null>(null);
+  const [tokenizedPayment, setTokenizedPayment] =
+    useState<TokenizedPaymentResult | null>(null);
 
   // Checkout Scheduling Option ("Now" vs "Schedule for Later")
   const [checkoutTiming, setCheckoutTiming] = useState<"asap" | "scheduled">(
@@ -193,6 +217,10 @@ export default function CustomerOrderingStorefront() {
 
   // Completed Order Tracker
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const placedOrderIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    placedOrderIdRef.current = placedOrder?.id || null;
+  }, [placedOrder?.id]);
   const [sentSmsToast, setSentSmsToast] = useState<SmsLog | null>(null);
 
   const syncCustomerToCheckoutFields = useCallback((cust: Customer | null) => {
@@ -288,11 +316,43 @@ export default function CustomerOrderingStorefront() {
             if (rest.features.dineInQr) return "dine_in";
             return "pickup";
           });
-          if (placedOrder) {
-            const refreshed = (data.orders || []).find(
-              (o: Order) => o.id === placedOrder.id
+
+          const pInt = data.platformIntegrations as
+            | PlatformIntegrationsConfig
+            | undefined;
+          const sqAllowed =
+            (pInt ? pInt.square.setupCompleted && pInt.square.availableToOwners : true) &&
+            rest.features.squarePos !== false &&
+            (rest.integrationsConfig?.square?.enabled ?? true) &&
+            (rest.integrationsConfig?.square?.acceptSquareCheckout ?? true);
+          const clvAllowed =
+            (pInt ? pInt.clover.setupCompleted && pInt.clover.availableToOwners : true) &&
+            rest.features.cloverPos !== false &&
+            (rest.integrationsConfig?.clover?.enabled ?? true) &&
+            (rest.integrationsConfig?.clover?.acceptCloverCheckout ?? true);
+          const isGwAllowed = (gw: CheckoutGatewayType) =>
+            ((gw === "stripe" || gw === "apple_pay") &&
+              rest.paymentConfig.stripe.enabled) ||
+            (gw === "paypal" && rest.paymentConfig.paypal.enabled) ||
+            (gw === "square" && sqAllowed) ||
+            (gw === "clover" && clvAllowed);
+          const fallbackGw: CheckoutGatewayType = rest.paymentConfig.stripe.enabled
+            ? "stripe"
+            : rest.paymentConfig.paypal.enabled
+              ? "paypal"
+              : sqAllowed
+                ? "square"
+                : clvAllowed
+                  ? "clover"
+                  : "stripe";
+          setPaymentGateway((prev) => (isGwAllowed(prev) ? prev : fallbackGw));
+          if (placedOrderIdRef.current) {
+            setPlacedOrder((prev) =>
+              prev
+                ? (data.orders || []).find((o: Order) => o.id === prev.id) ||
+                  prev
+                : null
             );
-            if (refreshed) setPlacedOrder(refreshed);
           }
         }
       } catch (e) {
@@ -301,7 +361,7 @@ export default function CustomerOrderingStorefront() {
         setLoading(false);
       }
     },
-    [slug, placedOrder]
+    [slug]
   );
 
   useEffect(() => {
@@ -496,9 +556,8 @@ export default function CustomerOrderingStorefront() {
 
   // Open the Schedule Re-Order modal from a past order
   const openScheduleModalFromOrder = (pastOrder: Order) => {
-    const defaultTitle = `${
-      pastOrder.items[0]?.name || restaurant?.name || "Signature"
-    }${pastOrder.items.length > 1 ? ` + ${pastOrder.items.length - 1} more` : ""} Re-Order`;
+    const defaultTitle = `${pastOrder.items[0]?.name || restaurant?.name || "Signature"
+      }${pastOrder.items.length > 1 ? ` + ${pastOrder.items.length - 1} more` : ""} Re-Order`;
     setScheduleModalSource({
       sourceOrderNumber: pastOrder.orderNumber,
       title: defaultTitle,
@@ -518,8 +577,8 @@ export default function CustomerOrderingStorefront() {
     setSchedOrderType(pastOrder.orderType);
     setSchedAddress(
       pastOrder.deliveryAddress ||
-        activeCustomer?.defaultAddress ||
-        deliveryAddress
+      activeCustomer?.defaultAddress ||
+      deliveryAddress
     );
     setSchedPaymentMethod(pastOrder.paymentMethod);
     setSchedNotes(pastOrder.specialInstructions || "");
@@ -528,9 +587,8 @@ export default function CustomerOrderingStorefront() {
   // Open the Schedule Re-Order modal from the current cart
   const openScheduleModalFromCart = () => {
     if (cart.length === 0 || !restaurant) return;
-    const defaultTitle = `${cart[0].name}${
-      cart.length > 1 ? ` + ${cart.length - 1} more` : ""
-    } Scheduled Order`;
+    const defaultTitle = `${cart[0].name}${cart.length > 1 ? ` + ${cart.length - 1} more` : ""
+      } Scheduled Order`;
     setScheduleModalSource({
       sourceOrderNumber: "CART",
       title: defaultTitle,
@@ -714,15 +772,15 @@ export default function CustomerOrderingStorefront() {
   const requiresAdvanceNotice = advanceDays > 0 || advanceHours > 0;
   const advanceNoticeSummary = requiresAdvanceNotice
     ? [
-        advanceDays > 0
-          ? `${advanceDays} ${advanceDays === 1 ? "Day" : "Days"}`
-          : "",
-        advanceHours > 0
-          ? `${advanceHours} ${advanceHours === 1 ? "Hour" : "Hours"}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" ")
+      advanceDays > 0
+        ? `${advanceDays} ${advanceDays === 1 ? "Day" : "Days"}`
+        : "",
+      advanceHours > 0
+        ? `${advanceHours} ${advanceHours === 1 ? "Hour" : "Hours"}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ")
     : "";
 
   const totalLeadMinutes =
@@ -751,7 +809,7 @@ export default function CustomerOrderingStorefront() {
   const getAdvanceDateIso = (extraDays: number) => {
     const base = new Date(
       Math.max(Date.now(), earliestReadyDateObj.getTime()) +
-        extraDays * 24 * 60 * 60 * 1000
+      extraDays * 24 * 60 * 60 * 1000
     );
     return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(
       2,
@@ -789,7 +847,7 @@ export default function CustomerOrderingStorefront() {
 
   const isPickupAvailableOnSelectedDay = Boolean(
     selectedDaySchedule?.enabled &&
-      (selectedDaySchedule?.pickupEnabled ?? true)
+    (selectedDaySchedule?.pickupEnabled ?? true)
   );
   const dayPickupStart =
     selectedDaySchedule?.pickupStartTime ||
@@ -958,16 +1016,37 @@ export default function CustomerOrderingStorefront() {
     const code = promoCodeInput.trim().toUpperCase();
     if (code === "NAPOLIVIP15") {
       setDiscountPercent(15);
+      setAppliedPromoCode(code);
+      setPromoFeedback({
+        valid: true,
+        message: "NAPOLIVIP15 applied — 15% off your order!",
+      });
     } else if (code === "WEEKEND20") {
       setDiscountPercent(20);
+      setAppliedPromoCode(code);
+      setPromoFeedback({
+        valid: true,
+        message: "WEEKEND20 applied — 20% off your order!",
+      });
     } else if (
       code === "TRUFFLE10" ||
       code === "OMAKASE10" ||
       code === "WELCOME10"
     ) {
       setDiscountPercent(10);
-    } else if (code) {
-      setDiscountPercent(10);
+      setAppliedPromoCode(code);
+      setPromoFeedback({
+        valid: true,
+        message: `${code} applied — 10% off your order!`,
+      });
+    } else {
+      setDiscountPercent(0);
+      setAppliedPromoCode("");
+      setPromoFeedback({
+        valid: false,
+        message:
+          "Invalid promo code — try WELCOME10, NAPOLIVIP15, or WEEKEND20",
+      });
     }
   };
 
@@ -975,7 +1054,7 @@ export default function CustomerOrderingStorefront() {
   const doordashDriveActive =
     (platformIntegrations
       ? platformIntegrations.doordashDrive.setupCompleted &&
-        platformIntegrations.doordashDrive.availableToOwners
+      platformIntegrations.doordashDrive.availableToOwners
       : true) &&
     restaurant.features.doordashDrive !== false &&
     (restaurant.integrationsConfig?.doordashDrive?.enabled ?? true);
@@ -983,7 +1062,7 @@ export default function CustomerOrderingStorefront() {
   const squareCheckoutActive =
     (platformIntegrations
       ? platformIntegrations.square.setupCompleted &&
-        platformIntegrations.square.availableToOwners
+      platformIntegrations.square.availableToOwners
       : true) &&
     restaurant.features.squarePos !== false &&
     (restaurant.integrationsConfig?.square?.enabled ?? true) &&
@@ -992,7 +1071,7 @@ export default function CustomerOrderingStorefront() {
   const cloverCheckoutActive =
     (platformIntegrations
       ? platformIntegrations.clover.setupCompleted &&
-        platformIntegrations.clover.availableToOwners
+      platformIntegrations.clover.availableToOwners
       : true) &&
     restaurant.features.cloverPos !== false &&
     (restaurant.integrationsConfig?.clover?.enabled ?? true) &&
@@ -1001,7 +1080,7 @@ export default function CustomerOrderingStorefront() {
   const vapiVoiceActive =
     (platformIntegrations
       ? platformIntegrations.vapi.setupCompleted &&
-        platformIntegrations.vapi.availableToOwners
+      platformIntegrations.vapi.availableToOwners
       : true) &&
     restaurant.features.vapiVoiceAi !== false &&
     (restaurant.integrationsConfig?.vapi?.enabled ?? true);
@@ -1022,11 +1101,11 @@ export default function CustomerOrderingStorefront() {
   );
   const freeDeliveryThreshold = doordashDriveActive
     ? restaurant.integrationsConfig?.doordashDrive?.freeDeliveryThreshold ??
-      restaurant.paymentConfig.freeDeliveryMin
+    restaurant.paymentConfig.freeDeliveryMin
     : restaurant.paymentConfig.freeDeliveryMin;
   const configuredDeliveryFee = doordashDriveActive
     ? restaurant.integrationsConfig?.doordashDrive?.customerDeliveryFeeShare ??
-      restaurant.paymentConfig.deliveryFee
+    restaurant.paymentConfig.deliveryFee
     : restaurant.paymentConfig.deliveryFee;
 
   const deliveryFee =
@@ -1060,10 +1139,9 @@ export default function CustomerOrderingStorefront() {
         chosenDate.getTime() < earliestReadyDateObj.getTime() - 2 * 60 * 1000
       ) {
         setCheckoutError(
-          `⏳ ${restaurant.name} requires at least ${
-            requiresAdvanceNotice
-              ? `${advanceNoticeSummary} advance notice`
-              : `${restaurant.prepTimeMinutes} mins prep time`
+          `⏳ ${restaurant.name} requires at least ${requiresAdvanceNotice
+            ? `${advanceNoticeSummary} advance notice`
+            : `${restaurant.prepTimeMinutes} mins prep time`
           }. Earliest available ready time is ${earliestReadyFormatted}.`
         );
         return;
@@ -1112,12 +1190,37 @@ export default function CustomerOrderingStorefront() {
 
     setSubmittingOrder(true);
     try {
+      let tokenResult: TokenizedPaymentResult | null =
+        tokenizedPayment && tokenizedPayment.gateway === paymentGateway
+          ? tokenizedPayment
+          : null;
+
+      if (!tokenResult) {
+        if (!paymentGatewayRef.current) {
+          setCheckoutError(
+            "Payment gateway is still initializing. Please try again."
+          );
+          return;
+        }
+        try {
+          tokenResult = await paymentGatewayRef.current.tokenize();
+          setTokenizedPayment(tokenResult);
+        } catch (tokErr) {
+          setCheckoutError(
+            tokErr instanceof Error
+              ? tokErr.message
+              : "Payment authorization failed. Please check your card or wallet details."
+          );
+          return;
+        }
+      }
+
       const scheduledForVal =
         checkoutTiming === "scheduled"
           ? `${checkoutSchedDate} ${checkoutSchedTime}`
           : requiresAdvanceNotice
-          ? `${earliestReadyDateIso} ${earliestReadyTimeStr}`
-          : undefined;
+            ? `${earliestReadyDateIso} ${earliestReadyTimeStr}`
+            : undefined;
 
       const res = await fetch(
         `/api/restaurants/${encodeURIComponent(restaurant.slug)}/orders`,
@@ -1138,16 +1241,15 @@ export default function CustomerOrderingStorefront() {
             deliveryFee,
             tip: tipAmount,
             discount: discountAmount,
+            promoCode: appliedPromoCode || undefined,
             total: grandTotal,
             paymentMethod,
+            paymentGateway,
+            paymentToken: tokenResult.token,
+            paymentIntentId: tokenResult.paymentIntentId,
+            paymentMode: tokenResult.mode,
             specialInstructions,
             scheduledFor: scheduledForVal,
-            paymentToken:
-              paymentMethod === "square"
-                ? "cnon:card-nonce-ok"
-                : paymentMethod === "clover"
-                ? `clv_tok_${restaurant.slug.replace(/[^a-z0-9]/g, "").slice(0, 8)}_live`
-                : undefined,
             simDay: simDay || undefined,
             simTime: simTime || undefined,
           }),
@@ -1201,6 +1303,11 @@ export default function CustomerOrderingStorefront() {
           setSentSmsToast(data.smsSent);
         }
         setCart([]);
+        setPromoCodeInput("");
+        setAppliedPromoCode("");
+        setDiscountPercent(0);
+        setPromoFeedback(null);
+        setTokenizedPayment(null);
         setShowCheckoutModal(false);
         await loadStorefront(simDay || undefined, simTime || undefined);
         await loadCustomerAccount(restaurant.slug, customerEmail, false);
@@ -1268,11 +1375,10 @@ export default function CustomerOrderingStorefront() {
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             {availability && (
               <span
-                className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
-                  availability.allowed
+                className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${availability.allowed
                     ? "bg-emerald-950/50 border-emerald-800/50 text-emerald-300"
                     : "bg-rose-950/60 border-rose-800/60 text-rose-300"
-                }`}
+                  }`}
               >
                 <Clock className="w-3 h-3" />
                 {availability.allowed
@@ -1701,7 +1807,7 @@ export default function CustomerOrderingStorefront() {
                         );
                         const nextStage =
                           stageOrder[
-                            Math.min(curIdx + 1, stageOrder.length - 1)
+                          Math.min(curIdx + 1, stageOrder.length - 1)
                           ];
                         const res = await fetch(
                           `/api/restaurants/${encodeURIComponent(
@@ -1828,20 +1934,18 @@ export default function CustomerOrderingStorefront() {
                       return (
                         <div
                           key={item.id}
-                          className={`bg-zinc-900/40 border rounded-2xl overflow-hidden transition flex flex-col justify-between group ${
-                            item.available
+                          className={`bg-zinc-900/40 border rounded-2xl overflow-hidden transition flex flex-col justify-between group ${item.available
                               ? "border-zinc-800/80 hover:border-zinc-700"
                               : "border-rose-900/40 opacity-75"
-                          }`}
+                            }`}
                         >
                           <div>
                             <div className="aspect-[16/10] relative overflow-hidden bg-zinc-900">
                               <img
                                 src={item.imageUrl}
                                 alt={item.name}
-                                className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${
-                                  !item.available ? "grayscale" : ""
-                                }`}
+                                className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${!item.available ? "grayscale" : ""
+                                  }`}
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                               <span className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-mono tracking-wider text-zinc-200 border border-zinc-700">
@@ -1889,16 +1993,15 @@ export default function CustomerOrderingStorefront() {
                                     style={
                                       tIdx === 0
                                         ? {
-                                            color: brandColor,
-                                            borderColor: `${brandColor}40`,
-                                          }
+                                          color: brandColor,
+                                          borderColor: `${brandColor}40`,
+                                        }
                                         : undefined
                                     }
-                                    className={`text-[10px] px-2.5 py-0.5 rounded font-mono ${
-                                      tIdx === 0
+                                    className={`text-[10px] px-2.5 py-0.5 rounded font-mono ${tIdx === 0
                                         ? "bg-zinc-800/80 border"
                                         : "bg-zinc-800 text-zinc-400"
-                                    }`}
+                                      }`}
                                   >
                                     {tag}
                                   </span>
@@ -1921,19 +2024,18 @@ export default function CustomerOrderingStorefront() {
                                         className="flex flex-wrap items-baseline gap-1.5"
                                       >
                                         <span
-                                          className={`font-mono text-[10px] uppercase tracking-wider font-semibold ${
-                                            isVariant
+                                          className={`font-mono text-[10px] uppercase tracking-wider font-semibold ${isVariant
                                               ? "text-amber-300"
                                               : isSide
-                                              ? "text-emerald-300"
-                                              : "text-sky-300"
-                                          }`}
+                                                ? "text-emerald-300"
+                                                : "text-sky-300"
+                                            }`}
                                         >
                                           {isVariant
                                             ? "Variants:"
                                             : isSide
-                                            ? "Side Options:"
-                                            : `${grp.name}:`}
+                                              ? "Side Options:"
+                                              : `${grp.name}:`}
                                         </span>
                                         <span className="text-zinc-300 line-clamp-1">
                                           {grp.options
@@ -1956,11 +2058,10 @@ export default function CustomerOrderingStorefront() {
                             <button
                               disabled={!canOrder}
                               onClick={() => openAddItemModal(item)}
-                              className={`w-full py-3 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
-                                canOrder
+                              className={`w-full py-3 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${canOrder
                                   ? "bg-zinc-800 hover:bg-gold-400 hover:text-black text-zinc-200"
                                   : "bg-zinc-900 text-zinc-600 cursor-not-allowed"
-                              }`}
+                                }`}
                             >
                               {item.available ? (
                                 <>
@@ -1994,19 +2095,17 @@ export default function CustomerOrderingStorefront() {
                       return (
                         <div
                           key={item.id}
-                          className={`p-4 rounded-2xl bg-zinc-900/40 border flex items-center justify-between gap-4 transition ${
-                            item.available
+                          className={`p-4 rounded-2xl bg-zinc-900/40 border flex items-center justify-between gap-4 transition ${item.available
                               ? "border-zinc-800/80 hover:border-zinc-700"
                               : "border-rose-900/40 opacity-65"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3.5 min-w-0">
                             <img
                               src={item.imageUrl}
                               alt={item.name}
-                              className={`h-16 w-16 rounded-xl object-cover shrink-0 border border-zinc-800 ${
-                                !item.available ? "grayscale" : ""
-                              }`}
+                              className={`h-16 w-16 rounded-xl object-cover shrink-0 border border-zinc-800 ${!item.available ? "grayscale" : ""
+                                }`}
                             />
                             <div className="min-w-0 space-y-1">
                               <h4 className="font-serif text-base text-white truncate">
@@ -2040,11 +2139,10 @@ export default function CustomerOrderingStorefront() {
                           <button
                             disabled={!canOrder}
                             onClick={() => openAddItemModal(item)}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider shrink-0 transition ${
-                              canOrder
+                            className={`px-3.5 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider shrink-0 transition ${canOrder
                                 ? "bg-zinc-800 hover:bg-gold-400 hover:text-black text-zinc-200"
                                 : "bg-zinc-900 text-zinc-600 cursor-not-allowed"
-                            }`}
+                              }`}
                           >
                             {item.available ? "+ Options" : "86'd"}
                           </button>
@@ -2062,19 +2160,17 @@ export default function CustomerOrderingStorefront() {
                       return (
                         <div
                           key={item.id}
-                          className={`p-5 rounded-2xl bg-zinc-900/30 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition ${
-                            item.available
+                          className={`p-5 rounded-2xl bg-zinc-900/30 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition ${item.available
                               ? "border-zinc-800/70 hover:border-zinc-700"
                               : "border-rose-900/40 opacity-70"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-start gap-4">
                             <img
                               src={item.imageUrl}
                               alt={item.name}
-                              className={`h-16 w-16 rounded-xl object-cover shrink-0 border border-zinc-800/80 ${
-                                !item.available ? "grayscale" : ""
-                              }`}
+                              className={`h-16 w-16 rounded-xl object-cover shrink-0 border border-zinc-800/80 ${!item.available ? "grayscale" : ""
+                                }`}
                             />
                             <div className="space-y-1">
                               <div className="flex flex-wrap items-center gap-2.5">
@@ -2118,19 +2214,18 @@ export default function CustomerOrderingStorefront() {
                                         className="text-zinc-400"
                                       >
                                         <strong
-                                          className={`font-mono text-[10px] uppercase ${
-                                            isVariant
+                                          className={`font-mono text-[10px] uppercase ${isVariant
                                               ? "text-amber-300"
                                               : isSide
-                                              ? "text-emerald-300"
-                                              : "text-sky-300"
-                                          }`}
+                                                ? "text-emerald-300"
+                                                : "text-sky-300"
+                                            }`}
                                         >
                                           {isVariant
                                             ? "Variants:"
                                             : isSide
-                                            ? "Sides:"
-                                            : `${grp.name}:`}
+                                              ? "Sides:"
+                                              : `${grp.name}:`}
                                         </strong>{" "}
                                         {grp.options
                                           .slice(0, 3)
@@ -2162,11 +2257,10 @@ export default function CustomerOrderingStorefront() {
                             <button
                               disabled={!canOrder}
                               onClick={() => openAddItemModal(item)}
-                              className={`px-5 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition ${
-                                canOrder
+                              className={`px-5 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition ${canOrder
                                   ? "bg-zinc-800 hover:bg-gold-400 hover:text-black text-zinc-200"
                                   : "bg-zinc-900 text-zinc-600 cursor-not-allowed"
-                              }`}
+                                }`}
                             >
                               {item.available
                                 ? "+ Variant & Sides"
@@ -2267,21 +2361,20 @@ export default function CustomerOrderingStorefront() {
             {/* Fulfillment Mode Selector */}
             <div className="space-y-2">
               <div
-                className={`grid gap-1.5 rounded-2xl bg-zinc-950/90 p-1.5 border border-zinc-800/80 ${
-                  [
+                className={`grid gap-1.5 rounded-2xl bg-zinc-950/90 p-1.5 border border-zinc-800/80 ${[
                     restaurant.features.pickup,
                     restaurant.features.delivery,
                     restaurant.features.dineInQr,
                   ].filter(Boolean).length === 1
                     ? "grid-cols-1"
                     : [
-                        restaurant.features.pickup,
-                        restaurant.features.delivery,
-                        restaurant.features.dineInQr,
-                      ].filter(Boolean).length === 2
-                    ? "grid-cols-2"
-                    : "grid-cols-3"
-                }`}
+                      restaurant.features.pickup,
+                      restaurant.features.delivery,
+                      restaurant.features.dineInQr,
+                    ].filter(Boolean).length === 2
+                      ? "grid-cols-2"
+                      : "grid-cols-3"
+                  }`}
               >
                 {restaurant.features.pickup && (
                   <button
@@ -2292,11 +2385,10 @@ export default function CustomerOrderingStorefront() {
                         ? { backgroundColor: brandColor, color: "#000" }
                         : undefined
                     }
-                    className={`rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${
-                      orderType === "pickup"
+                    className={`rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${orderType === "pickup"
                         ? "font-bold shadow"
                         : "text-zinc-400 hover:text-white"
-                    }`}
+                      }`}
                   >
                     🛍️ Pickup
                   </button>
@@ -2310,11 +2402,10 @@ export default function CustomerOrderingStorefront() {
                         ? { backgroundColor: brandColor, color: "#000" }
                         : undefined
                     }
-                    className={`rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${
-                      orderType === "delivery"
+                    className={`rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${orderType === "delivery"
                         ? "font-bold shadow"
                         : "text-zinc-400 hover:text-white"
-                    }`}
+                      }`}
                   >
                     🛵 Delivery
                   </button>
@@ -2328,11 +2419,10 @@ export default function CustomerOrderingStorefront() {
                         ? { backgroundColor: brandColor, color: "#000" }
                         : undefined
                     }
-                    className={`rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${
-                      orderType === "dine_in"
+                    className={`rounded-xl py-1.5 text-[11px] font-mono uppercase tracking-wider transition ${orderType === "dine_in"
                         ? "font-bold shadow"
                         : "text-zinc-400 hover:text-white"
-                    }`}
+                      }`}
                   >
                     🍽️ Dine-In
                   </button>
@@ -2361,8 +2451,7 @@ export default function CustomerOrderingStorefront() {
                       <span>
                         🛵{" "}
                         {restaurant.features.deliveryInstructions ||
-                          `Local delivery (${
-                            restaurant.features.deliveryRadiusMiles || 5
+                          `Local delivery (${restaurant.features.deliveryRadiusMiles || 5
                           } mi radius)`}
                       </span>
                       <span className="font-mono text-sky-400 font-semibold">
@@ -2399,8 +2488,8 @@ export default function CustomerOrderingStorefront() {
                     {orderType === "delivery"
                       ? "Delivery Date & Time"
                       : orderType === "pickup"
-                      ? "Pickup Date & Time"
-                      : "Dine-In Date & Time"}
+                        ? "Pickup Date & Time"
+                        : "Dine-In Date & Time"}
                   </span>
                 </div>
                 {requiresAdvanceNotice && (
@@ -2419,11 +2508,10 @@ export default function CustomerOrderingStorefront() {
                       ? { backgroundColor: brandColor, color: "#000" }
                       : undefined
                   }
-                  className={`rounded-xl py-1.5 px-2 text-[10px] font-mono uppercase transition ${
-                    checkoutTiming === "asap"
+                  className={`rounded-xl py-1.5 px-2 text-[10px] font-mono uppercase transition ${checkoutTiming === "asap"
                       ? "font-bold shadow"
                       : "bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800"
-                  }`}
+                    }`}
                 >
                   {requiresAdvanceNotice
                     ? "⏳ Earliest Ready"
@@ -2446,11 +2534,10 @@ export default function CustomerOrderingStorefront() {
                       ? { backgroundColor: brandColor, color: "#000" }
                       : undefined
                   }
-                  className={`rounded-xl py-1.5 px-2 text-[10px] font-mono uppercase transition ${
-                    checkoutTiming === "scheduled"
+                  className={`rounded-xl py-1.5 px-2 text-[10px] font-mono uppercase transition ${checkoutTiming === "scheduled"
                       ? "font-bold shadow"
                       : "bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800"
-                  }`}
+                    }`}
                 >
                   📅 Pick Advance Date
                 </button>
@@ -2463,8 +2550,8 @@ export default function CustomerOrderingStorefront() {
                     {orderType === "delivery"
                       ? "Delivery"
                       : orderType === "pickup"
-                      ? "Pickup"
-                      : "Ready"}
+                        ? "Pickup"
+                        : "Ready"}
                     :
                   </span>
                   <strong className="font-mono text-white">
@@ -2485,16 +2572,15 @@ export default function CustomerOrderingStorefront() {
                           style={
                             active
                               ? {
-                                  borderColor: brandColor,
-                                  color: brandColor,
-                                }
+                                borderColor: brandColor,
+                                color: brandColor,
+                              }
                               : undefined
                           }
-                          className={`rounded-lg border px-2 py-1 font-mono text-[10px] transition ${
-                            active
+                          className={`rounded-lg border px-2 py-1 font-mono text-[10px] transition ${active
                               ? "bg-zinc-900 font-bold"
                               : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white"
-                          }`}
+                            }`}
                         >
                           {qd.label}
                         </button>
@@ -2567,18 +2653,17 @@ export default function CustomerOrderingStorefront() {
                                   style={
                                     activeSlot && !cap.isFull
                                       ? {
-                                          backgroundColor: brandColor,
-                                          color: "#000",
-                                        }
+                                        backgroundColor: brandColor,
+                                        color: "#000",
+                                      }
                                       : undefined
                                   }
-                                  className={`shrink-0 rounded-lg border px-2 py-1 font-mono text-[10px] transition ${
-                                    cap.isFull
+                                  className={`shrink-0 rounded-lg border px-2 py-1 font-mono text-[10px] transition ${cap.isFull
                                       ? "cursor-not-allowed border-rose-900/50 bg-rose-950/30 text-rose-400/60 line-through"
                                       : activeSlot
-                                      ? "border-transparent font-bold shadow"
-                                      : "border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-600"
-                                  }`}
+                                        ? "border-transparent font-bold shadow"
+                                        : "border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-600"
+                                    }`}
                                   title={
                                     cap.isFull
                                       ? `${slot} is FULL (${cap.bookedOrders}/${cap.maxOrders} orders booked)`
@@ -2587,13 +2672,12 @@ export default function CustomerOrderingStorefront() {
                                 >
                                   <span>{slot}</span>{" "}
                                   <span
-                                    className={`text-[9px] ${
-                                      cap.isFull
+                                    className={`text-[9px] ${cap.isFull
                                         ? "font-bold text-rose-400 no-underline"
                                         : activeSlot
-                                        ? "opacity-80"
-                                        : "text-emerald-400"
-                                    }`}
+                                          ? "opacity-80"
+                                          : "text-emerald-400"
+                                      }`}
                                   >
                                     {cap.isFull
                                       ? "(FULL)"
@@ -2724,21 +2808,34 @@ export default function CustomerOrderingStorefront() {
             {cart.length > 0 && (
               <div className="space-y-3 pt-1">
                 {restaurant.features.promoCodes && (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Promo Code (e.g. NAPOLIVIP15)"
-                      value={promoCodeInput}
-                      onChange={(e) => setPromoCodeInput(e.target.value)}
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs font-mono uppercase text-zinc-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyPromo}
-                      className="rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2 text-xs font-mono uppercase text-zinc-200 hover:bg-zinc-700"
-                    >
-                      Apply
-                    </button>
+                  <div className="space-y-1.5">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Promo Code (e.g. NAPOLIVIP15)"
+                        value={promoCodeInput}
+                        onChange={(e) => setPromoCodeInput(e.target.value)}
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs font-mono uppercase text-zinc-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyPromo}
+                        className="rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2 text-xs font-mono uppercase text-zinc-200 hover:bg-zinc-700"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {promoFeedback && (
+                      <p
+                        className={`text-[11px] font-medium ${
+                          promoFeedback.valid
+                            ? "text-emerald-400"
+                            : "text-rose-400"
+                        }`}
+                      >
+                        {promoFeedback.message}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -2752,16 +2849,15 @@ export default function CustomerOrderingStorefront() {
                         style={
                           tipPercent === pct
                             ? {
-                                borderColor: brandColor,
-                                color: brandColor,
-                              }
+                              borderColor: brandColor,
+                              color: brandColor,
+                            }
                             : undefined
                         }
-                        className={`rounded-xl border py-1.5 text-[11px] font-mono transition ${
-                          tipPercent === pct
+                        className={`rounded-xl border py-1.5 text-[11px] font-mono transition ${tipPercent === pct
                             ? "bg-zinc-900 font-bold"
                             : "border-zinc-800 bg-zinc-950 text-zinc-400"
-                        }`}
+                          }`}
                       >
                         {pct === 0 ? "No Tip" : `${pct}% Tip`}
                       </button>
@@ -2864,11 +2960,10 @@ export default function CustomerOrderingStorefront() {
                     ? { backgroundColor: brandColor, color: "#000" }
                     : undefined
                 }
-                className={`w-full py-4 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
-                  cart.length > 0 && (!availability || availability.allowed)
+                className={`w-full py-4 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${cart.length > 0 && (!availability || availability.allowed)
                     ? "hover:opacity-90 shadow-lg"
                     : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-                }`}
+                  }`}
               >
                 {availability && !availability.allowed ? (
                   "Ordering Currently Paused"
@@ -2963,11 +3058,10 @@ export default function CustomerOrderingStorefront() {
                   ? { backgroundColor: brandColor, color: "#000" }
                   : undefined
               }
-              className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
-                cart.length > 0 && (!availability || availability.allowed)
+              className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${cart.length > 0 && (!availability || availability.allowed)
                   ? "shadow-lg hover:opacity-90"
                   : "cursor-not-allowed bg-zinc-800 text-zinc-500"
-              }`}
+                }`}
             >
               Checkout
             </button>
@@ -3067,16 +3161,15 @@ export default function CustomerOrderingStorefront() {
                         style={
                           isCurrent
                             ? {
-                                borderColor: brandColor,
-                                backgroundColor: `${brandColor}18`,
-                              }
+                              borderColor: brandColor,
+                              backgroundColor: `${brandColor}18`,
+                            }
                             : undefined
                         }
-                        className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs transition ${
-                          isCurrent
+                        className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs transition ${isCurrent
                             ? "text-white font-semibold"
                             : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white"
-                        }`}
+                          }`}
                       >
                         <span>{dc.name}</span>
                         {dc.vipStatus && (
@@ -3109,11 +3202,10 @@ export default function CustomerOrderingStorefront() {
                         ? { backgroundColor: brandColor, color: "#000" }
                         : undefined
                     }
-                    className={`shrink-0 inline-flex items-center gap-2 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-                      accountTab === "history"
+                    className={`shrink-0 inline-flex items-center gap-2 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold uppercase tracking-wider transition ${accountTab === "history"
                         ? "shadow"
                         : "bg-zinc-900 text-zinc-400 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <History className="h-4 w-4" />
                     Order History & Re-Order ({customerOrders.length})
@@ -3126,11 +3218,10 @@ export default function CustomerOrderingStorefront() {
                         ? { backgroundColor: brandColor, color: "#000" }
                         : undefined
                     }
-                    className={`shrink-0 inline-flex items-center gap-2 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-                      accountTab === "scheduled"
+                    className={`shrink-0 inline-flex items-center gap-2 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold uppercase tracking-wider transition ${accountTab === "scheduled"
                         ? "shadow"
                         : "bg-zinc-900 text-zinc-400 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <Repeat className="h-4 w-4" />
                     Scheduled & Recurring ({scheduledReorders.length})
@@ -3143,11 +3234,10 @@ export default function CustomerOrderingStorefront() {
                         ? { backgroundColor: brandColor, color: "#000" }
                         : undefined
                     }
-                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-                      accountTab === "profile"
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition ${accountTab === "profile"
                         ? "shadow"
                         : "bg-zinc-900 text-zinc-400 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <User className="h-4 w-4" />
                     Profile, Loyalty & Addresses
@@ -3162,11 +3252,10 @@ export default function CustomerOrderingStorefront() {
                     ? { backgroundColor: brandColor, color: "#000" }
                     : undefined
                 }
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-                  accountTab === "auth"
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition ${accountTab === "auth"
                     ? "shadow"
                     : "bg-zinc-900 text-zinc-400 hover:text-white"
-                }`}
+                  }`}
               >
                 <UserPlus className="h-4 w-4" />
                 {activeCustomer
@@ -3215,14 +3304,13 @@ export default function CustomerOrderingStorefront() {
                                 Order #{ord.orderNumber}
                               </span>
                               <span
-                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono uppercase border ${
-                                  ord.status === "completed" ||
-                                  ord.status === "ready"
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono uppercase border ${ord.status === "completed" ||
+                                    ord.status === "ready"
                                     ? "bg-emerald-950/70 border-emerald-700/70 text-emerald-300"
                                     : ord.status === "cancelled"
                                       ? "bg-rose-950/70 border-rose-700/70 text-rose-300"
                                       : "bg-amber-950/70 border-amber-700/70 text-amber-300"
-                                }`}
+                                  }`}
                               >
                                 {ord.status}
                               </span>
@@ -3256,42 +3344,42 @@ export default function CustomerOrderingStorefront() {
                               ord.posSync?.squareOrderId ||
                               ord.posSync?.cloverOrderId ||
                               ord.posSync?.sourceChannel ===
-                                "vapi_voice_call") && (
-                              <div className="mt-2 flex flex-wrap items-center gap-2">
-                                {ord.deliveryTracking && (
-                                  <a
-                                    href={ord.deliveryTracking.trackingUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-500/40 bg-rose-950/30 px-2.5 py-0.5 text-[10px] font-mono text-rose-200 hover:bg-rose-900/40"
-                                  >
-                                    🚗 DoorDash:{" "}
-                                    {ord.deliveryTracking.dasherName} (
-                                    {ord.deliveryTracking.status.replace(
-                                      /_/g,
-                                      " "
+                              "vapi_voice_call") && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  {ord.deliveryTracking && (
+                                    <a
+                                      href={ord.deliveryTracking.trackingUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1 rounded-lg border border-rose-500/40 bg-rose-950/30 px-2.5 py-0.5 text-[10px] font-mono text-rose-200 hover:bg-rose-900/40"
+                                    >
+                                      🚗 DoorDash:{" "}
+                                      {ord.deliveryTracking.dasherName} (
+                                      {ord.deliveryTracking.status.replace(
+                                        /_/g,
+                                        " "
+                                      )}
+                                      ) ↗
+                                    </a>
+                                  )}
+                                  {ord.posSync?.squareOrderId && (
+                                    <span className="inline-flex items-center gap-1 rounded-lg border border-sky-500/30 bg-sky-950/30 px-2.5 py-0.5 text-[10px] font-mono text-sky-300">
+                                      ⬛ Square: {ord.posSync.squareOrderId}
+                                    </span>
+                                  )}
+                                  {ord.posSync?.cloverOrderId && (
+                                    <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-950/30 px-2.5 py-0.5 text-[10px] font-mono text-emerald-300">
+                                      🍀 Clover KDS: {ord.posSync.cloverOrderId}
+                                    </span>
+                                  )}
+                                  {ord.posSync?.sourceChannel ===
+                                    "vapi_voice_call" && (
+                                      <span className="inline-flex items-center gap-1 rounded-lg border border-violet-500/30 bg-violet-950/30 px-2.5 py-0.5 text-[10px] font-mono text-violet-300">
+                                        🎙️ Vapi AI Phone Order
+                                      </span>
                                     )}
-                                    ) ↗
-                                  </a>
-                                )}
-                                {ord.posSync?.squareOrderId && (
-                                  <span className="inline-flex items-center gap-1 rounded-lg border border-sky-500/30 bg-sky-950/30 px-2.5 py-0.5 text-[10px] font-mono text-sky-300">
-                                    ⬛ Square: {ord.posSync.squareOrderId}
-                                  </span>
-                                )}
-                                {ord.posSync?.cloverOrderId && (
-                                  <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-950/30 px-2.5 py-0.5 text-[10px] font-mono text-emerald-300">
-                                    🍀 Clover KDS: {ord.posSync.cloverOrderId}
-                                  </span>
-                                )}
-                                {ord.posSync?.sourceChannel ===
-                                  "vapi_voice_call" && (
-                                  <span className="inline-flex items-center gap-1 rounded-lg border border-violet-500/30 bg-violet-950/30 px-2.5 py-0.5 text-[10px] font-mono text-violet-300">
-                                    🎙️ Vapi AI Phone Order
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                                </div>
+                              )}
                           </div>
 
                           <div className="text-right">
@@ -3451,13 +3539,12 @@ export default function CustomerOrderingStorefront() {
                                 ↻ {sched.frequency}
                               </span>
                               <span
-                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono uppercase border ${
-                                  sched.status === "active"
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono uppercase border ${sched.status === "active"
                                     ? "bg-emerald-950/70 border-emerald-700/70 text-emerald-300"
                                     : sched.status === "paused"
                                       ? "bg-amber-950/70 border-amber-700/70 text-amber-300"
                                       : "bg-zinc-900 border-zinc-700 text-zinc-400"
-                                }`}
+                                  }`}
                               >
                                 {sched.status}
                               </span>
@@ -3506,8 +3593,8 @@ export default function CustomerOrderingStorefront() {
                           <span className="text-[11px] text-zinc-500">
                             {sched.lastTriggeredAt
                               ? `Last dispatched: ${new Date(
-                                  sched.lastTriggeredAt
-                                ).toLocaleDateString()}`
+                                sched.lastTriggeredAt
+                              ).toLocaleDateString()}`
                               : "Ready for upcoming scheduled window"}
                           </span>
 
@@ -3723,11 +3810,10 @@ export default function CustomerOrderingStorefront() {
                           ? { backgroundColor: brandColor, color: "#000" }
                           : undefined
                       }
-                      className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-wider ${
-                        authFormMode === "login"
+                      className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-wider ${authFormMode === "login"
                           ? ""
                           : "text-zinc-400 hover:text-white"
-                      }`}
+                        }`}
                     >
                       Sign In
                     </button>
@@ -3739,11 +3825,10 @@ export default function CustomerOrderingStorefront() {
                           ? { backgroundColor: brandColor, color: "#000" }
                           : undefined
                       }
-                      className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-wider ${
-                        authFormMode === "register"
+                      className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-wider ${authFormMode === "register"
                           ? ""
                           : "text-zinc-400 hover:text-white"
-                      }`}
+                        }`}
                     >
                       Create VIP Account
                     </button>
@@ -4001,11 +4086,10 @@ export default function CustomerOrderingStorefront() {
                           ? { backgroundColor: brandColor, color: "#000" }
                           : undefined
                       }
-                      className={`rounded-xl border py-2 text-xs font-mono uppercase transition ${
-                        schedFrequency === f.id
+                      className={`rounded-xl border py-2 text-xs font-mono uppercase transition ${schedFrequency === f.id
                           ? "font-bold border-transparent"
                           : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white"
-                      }`}
+                        }`}
                     >
                       {f.label}
                     </button>
@@ -4038,12 +4122,18 @@ export default function CustomerOrderingStorefront() {
                     value={schedPaymentMethod}
                     onChange={(e) =>
                       setSchedPaymentMethod(
-                        e.target.value as "stripe" | "paypal"
+                        e.target.value as
+                          | "stripe"
+                          | "square"
+                          | "clover"
+                          | "paypal"
                       )
                     }
                     className="mt-1 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-xs text-white"
                   >
                     <option value="stripe">Stripe Card (•••• 4242)</option>
+                    <option value="square">Square Web Payments</option>
+                    <option value="clover">Clover Checkout</option>
                     <option value="paypal">PayPal Express</option>
                   </select>
                 </div>
@@ -4146,19 +4236,18 @@ export default function CustomerOrderingStorefront() {
                       <label className="text-xs font-mono uppercase tracking-wider text-white font-semibold flex items-center gap-2">
                         <span>{group.name}</span>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[9px] font-mono uppercase ${
-                            isVariant
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-mono uppercase ${isVariant
                               ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
                               : isSide
-                              ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-                              : "bg-sky-500/15 text-sky-300 border border-sky-500/30"
-                          }`}
+                                ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                                : "bg-sky-500/15 text-sky-300 border border-sky-500/30"
+                            }`}
                         >
                           {isVariant
                             ? "Variant • Choose 1"
                             : isSide
-                            ? "Side Options • Multi-Select"
-                            : "Add-On • Optional"}
+                              ? "Side Options • Multi-Select"
+                              : "Add-On • Optional"}
                         </span>
                       </label>
                       <span className="text-[10px] font-mono text-zinc-500">
@@ -4182,11 +4271,10 @@ export default function CustomerOrderingStorefront() {
                                   ? { borderColor: brandColor }
                                   : undefined
                               }
-                              className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition ${
-                                isChecked
+                              className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition ${isChecked
                                   ? "bg-zinc-900 text-white font-semibold"
                                   : "border-zinc-800 bg-zinc-950/70 text-zinc-300 hover:border-zinc-700"
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-2.5">
                                 <input
@@ -4195,15 +4283,15 @@ export default function CustomerOrderingStorefront() {
                                   onChange={() => {
                                     const nextArr = isChecked
                                       ? currentArr.filter(
-                                          (x) => x.optionLabel !== opt.label
-                                        )
+                                        (x) => x.optionLabel !== opt.label
+                                      )
                                       : [
-                                          ...currentArr,
-                                          {
-                                            optionLabel: opt.label,
-                                            priceDelta: opt.priceDelta,
-                                          },
-                                        ];
+                                        ...currentArr,
+                                        {
+                                          optionLabel: opt.label,
+                                          priceDelta: opt.priceDelta,
+                                        },
+                                      ];
                                     setSelectedMultiMods({
                                       ...selectedMultiMods,
                                       [group.name]: nextArr,
@@ -4238,11 +4326,10 @@ export default function CustomerOrderingStorefront() {
                                 ? { borderColor: brandColor }
                                 : undefined
                             }
-                            className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition ${
-                              isSelected
+                            className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition ${isSelected
                                 ? "bg-zinc-900 text-white font-semibold"
                                 : "border-zinc-800 bg-zinc-950/70 text-zinc-300 hover:border-zinc-700"
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-2.5">
                               <input
@@ -4413,21 +4500,20 @@ export default function CustomerOrderingStorefront() {
                   Fulfillment Option
                 </label>
                 <div
-                  className={`grid gap-2 ${
-                    [
+                  className={`grid gap-2 ${[
                       restaurant.features.pickup,
                       restaurant.features.delivery,
                       restaurant.features.dineInQr,
                     ].filter(Boolean).length === 1
                       ? "grid-cols-1"
                       : [
-                          restaurant.features.pickup,
-                          restaurant.features.delivery,
-                          restaurant.features.dineInQr,
-                        ].filter(Boolean).length === 2
-                      ? "grid-cols-2"
-                      : "grid-cols-3"
-                  }`}
+                        restaurant.features.pickup,
+                        restaurant.features.delivery,
+                        restaurant.features.dineInQr,
+                      ].filter(Boolean).length === 2
+                        ? "grid-cols-2"
+                        : "grid-cols-3"
+                    }`}
                 >
                   {restaurant.features.pickup && (
                     <button
@@ -4438,11 +4524,10 @@ export default function CustomerOrderingStorefront() {
                           ? { backgroundColor: brandColor, color: "#000" }
                           : undefined
                       }
-                      className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${
-                        orderType === "pickup"
+                      className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${orderType === "pickup"
                           ? "font-bold shadow"
                           : "bg-zinc-900 text-zinc-400 hover:text-white"
-                      }`}
+                        }`}
                     >
                       🛍️ Pickup
                     </button>
@@ -4456,11 +4541,10 @@ export default function CustomerOrderingStorefront() {
                           ? { backgroundColor: brandColor, color: "#000" }
                           : undefined
                       }
-                      className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${
-                        orderType === "delivery"
+                      className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${orderType === "delivery"
                           ? "font-bold shadow"
                           : "bg-zinc-900 text-zinc-400 hover:text-white"
-                      }`}
+                        }`}
                     >
                       🛵 Delivery
                     </button>
@@ -4474,11 +4558,10 @@ export default function CustomerOrderingStorefront() {
                           ? { backgroundColor: brandColor, color: "#000" }
                           : undefined
                       }
-                      className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${
-                        orderType === "dine_in"
+                      className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${orderType === "dine_in"
                           ? "font-bold shadow"
                           : "bg-zinc-900 text-zinc-400 hover:text-white"
-                      }`}
+                        }`}
                     >
                       🍽️ Dine-In
                     </button>
@@ -4521,11 +4604,10 @@ export default function CustomerOrderingStorefront() {
                       ? { backgroundColor: brandColor, color: "#000" }
                       : undefined
                   }
-                  className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${
-                    checkoutTiming === "asap"
+                  className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${checkoutTiming === "asap"
                       ? "font-bold"
                       : "bg-zinc-900 text-zinc-400 hover:text-white"
-                  }`}
+                    }`}
                 >
                   {requiresAdvanceNotice
                     ? `⏳ Earliest (${earliestReadyFormatted})`
@@ -4543,11 +4625,10 @@ export default function CustomerOrderingStorefront() {
                       ? { backgroundColor: brandColor, color: "#000" }
                       : undefined
                   }
-                  className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${
-                    checkoutTiming === "scheduled"
+                  className={`rounded-xl py-2 px-2 text-xs font-mono uppercase transition ${checkoutTiming === "scheduled"
                       ? "font-bold"
                       : "bg-zinc-900 text-zinc-400 hover:text-white"
-                  }`}
+                    }`}
                 >
                   📅 Choose Later Time
                 </button>
@@ -4566,16 +4647,15 @@ export default function CustomerOrderingStorefront() {
                           style={
                             active
                               ? {
-                                  borderColor: brandColor,
-                                  color: brandColor,
-                                }
+                                borderColor: brandColor,
+                                color: brandColor,
+                              }
                               : undefined
                           }
-                          className={`rounded-lg border px-2.5 py-1 font-mono text-[10px] transition ${
-                            active
+                          className={`rounded-lg border px-2.5 py-1 font-mono text-[10px] transition ${active
                               ? "bg-zinc-900 font-bold"
                               : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white"
-                          }`}
+                            }`}
                         >
                           {qd.label} ({qd.dateIso.slice(5)})
                         </button>
@@ -4645,18 +4725,17 @@ export default function CustomerOrderingStorefront() {
                                   style={
                                     activeSlot && !cap.isFull
                                       ? {
-                                          backgroundColor: brandColor,
-                                          color: "#000",
-                                        }
+                                        backgroundColor: brandColor,
+                                        color: "#000",
+                                      }
                                       : undefined
                                   }
-                                  className={`shrink-0 rounded-lg border px-2.5 py-1 font-mono text-[10px] transition ${
-                                    cap.isFull
+                                  className={`shrink-0 rounded-lg border px-2.5 py-1 font-mono text-[10px] transition ${cap.isFull
                                       ? "cursor-not-allowed border-rose-900/50 bg-rose-950/30 text-rose-400/60 line-through"
                                       : activeSlot
-                                      ? "border-transparent font-bold shadow"
-                                      : "border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-600"
-                                  }`}
+                                        ? "border-transparent font-bold shadow"
+                                        : "border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-600"
+                                    }`}
                                   title={
                                     cap.isFull
                                       ? `${slot} is FULL (${cap.bookedOrders}/${cap.maxOrders} orders booked)`
@@ -4665,13 +4744,12 @@ export default function CustomerOrderingStorefront() {
                                 >
                                   <span>{slot}</span>{" "}
                                   <span
-                                    className={`text-[9px] ${
-                                      cap.isFull
+                                    className={`text-[9px] ${cap.isFull
                                         ? "font-bold text-rose-400 no-underline"
                                         : activeSlot
-                                        ? "opacity-80"
-                                        : "text-emerald-400"
-                                    }`}
+                                          ? "opacity-80"
+                                          : "text-emerald-400"
+                                      }`}
                                   >
                                     {cap.isFull
                                       ? "(FULL)"
@@ -4814,21 +4892,24 @@ export default function CustomerOrderingStorefront() {
                 Select Merchant Gateway ({restaurant.name})
               </label>
 
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {restaurant.paymentConfig.stripe.enabled && (
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod("stripe")}
+                    onClick={() => {
+                      setPaymentGateway("stripe");
+                      setPaymentMethod("stripe");
+                      setTokenizedPayment(null);
+                    }}
                     style={
-                      paymentMethod === "stripe"
+                      paymentGateway === "stripe"
                         ? { borderColor: brandColor }
                         : undefined
                     }
-                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-                      paymentMethod === "stripe"
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-semibold uppercase tracking-wider transition ${paymentGateway === "stripe"
                         ? "bg-zinc-900 text-white"
                         : "border-zinc-800 bg-zinc-950 text-zinc-500"
-                    }`}
+                      }`}
                   >
                     <CreditCard
                       className="h-4 w-4"
@@ -4838,20 +4919,46 @@ export default function CustomerOrderingStorefront() {
                   </button>
                 )}
 
-                {restaurant.paymentConfig.paypal.enabled && (
+                {restaurant.paymentConfig.stripe.enabled && (
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod("paypal")}
+                    onClick={() => {
+                      setPaymentGateway("apple_pay");
+                      setPaymentMethod("stripe");
+                      setTokenizedPayment(null);
+                    }}
                     style={
-                      paymentMethod === "paypal"
+                      paymentGateway === "apple_pay"
                         ? { borderColor: brandColor }
                         : undefined
                     }
-                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-                      paymentMethod === "paypal"
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-semibold uppercase tracking-wider transition ${paymentGateway === "apple_pay"
                         ? "bg-zinc-900 text-white"
                         : "border-zinc-800 bg-zinc-950 text-zinc-500"
-                    }`}
+                      }`}
+                  >
+                    <span></span>
+                    Apple Pay
+                  </button>
+                )}
+
+                {restaurant.paymentConfig.paypal.enabled && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentGateway("paypal");
+                      setPaymentMethod("paypal");
+                      setTokenizedPayment(null);
+                    }}
+                    style={
+                      paymentGateway === "paypal"
+                        ? { borderColor: brandColor }
+                        : undefined
+                    }
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-semibold uppercase tracking-wider transition ${paymentGateway === "paypal"
+                        ? "bg-zinc-900 text-white"
+                        : "border-zinc-800 bg-zinc-950 text-zinc-500"
+                      }`}
                   >
                     <Globe className="h-4 w-4 text-sky-400" />
                     PayPal
@@ -4861,17 +4968,20 @@ export default function CustomerOrderingStorefront() {
                 {squareCheckoutActive && (
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod("square")}
+                    onClick={() => {
+                      setPaymentGateway("square");
+                      setPaymentMethod("square");
+                      setTokenizedPayment(null);
+                    }}
                     style={
-                      paymentMethod === "square"
+                      paymentGateway === "square"
                         ? { borderColor: brandColor }
                         : undefined
                     }
-                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-                      paymentMethod === "square"
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-semibold uppercase tracking-wider transition ${paymentGateway === "square"
                         ? "bg-zinc-900 text-white"
                         : "border-zinc-800 bg-zinc-950 text-zinc-500"
-                    }`}
+                      }`}
                   >
                     <span>⬛</span>
                     Square
@@ -4881,17 +4991,20 @@ export default function CustomerOrderingStorefront() {
                 {cloverCheckoutActive && (
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod("clover")}
+                    onClick={() => {
+                      setPaymentGateway("clover");
+                      setPaymentMethod("clover");
+                      setTokenizedPayment(null);
+                    }}
                     style={
-                      paymentMethod === "clover"
+                      paymentGateway === "clover"
                         ? { borderColor: brandColor }
                         : undefined
                     }
-                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-                      paymentMethod === "clover"
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-semibold uppercase tracking-wider transition ${paymentGateway === "clover"
                         ? "bg-zinc-900 text-white"
                         : "border-zinc-800 bg-zinc-950 text-zinc-500"
-                    }`}
+                      }`}
                   >
                     <span>🍀</span>
                     Clover
@@ -4899,87 +5012,19 @@ export default function CustomerOrderingStorefront() {
                 )}
               </div>
 
-              {paymentMethod === "stripe" ? (
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-2 text-xs">
-                  <div className="flex items-center justify-between text-zinc-300 font-mono text-[11px]">
-                    <span>
-                      Connected Stripe:{" "}
-                      {restaurant.paymentConfig.stripe.accountId}
-                    </span>
-                    <ShieldCheck
-                      className="h-4 w-4"
-                      style={{ color: brandColor }}
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    readOnly
-                    value="•••• •••• •••• 4242   |   EXP 12/28   |   CVC 888"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-200"
-                  />
-                </div>
-              ) : paymentMethod === "square" ? (
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-2 text-xs text-zinc-300">
-                  <div className="flex items-center justify-between font-mono text-[11px] text-sky-300">
-                    <span>
-                      ⬛ Square Web Payments SDK • Location:{" "}
-                      {restaurant.integrationsConfig?.square?.locationId ||
-                        "L_MAIN_KITCHEN"}
-                    </span>
-                    <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] text-sky-300">
-                      source_id: cnon:card-nonce-ok
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    readOnly
-                    value="•••• •••• •••• 1111   |   EXP 09/28   |   CVV 111   |   ZIP 94103"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-200"
-                  />
-                  <p className="text-[11px] text-zinc-500">
-                    Tokenizes card via Square Web Payments SDK →{" "}
-                    <code>POST /v2/orders</code> +{" "}
-                    <code>POST /v2/payments</code> (direct settlement to{" "}
-                    {restaurant.name}).
-                  </p>
-                </div>
-              ) : paymentMethod === "clover" ? (
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-2 text-xs text-zinc-300">
-                  <div className="flex items-center justify-between font-mono text-[11px] text-emerald-300">
-                    <span>
-                      🍀 Clover Hosted iFrame (PAKMS) • Merchant:{" "}
-                      {restaurant.integrationsConfig?.clover?.merchantId ||
-                        "CLV_MERCHANT"}
-                    </span>
-                    <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
-                      token: clv_tok_iframe
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    readOnly
-                    value="•••• •••• •••• 4242   |   EXP 11/28   |   CVV 242   |   ZIP 60661"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-200"
-                  />
-                  <p className="text-[11px] text-zinc-500">
-                    Tokenizes card via Clover Hosted iFrame SDK (
-                    <code>GET /pakms/apikey</code>) →{" "}
-                    <code>POST /v1/charges</code> +{" "}
-                    <code>POST /v3/merchants/&#123;mId&#125;/atomic_order/orders</code>.
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-xs text-zinc-300 space-y-1">
-                  <p className="font-mono text-[11px] text-sky-400">
-                    PayPal Merchant:{" "}
-                    {restaurant.paymentConfig.paypal.merchantEmail}
-                  </p>
-                  <p className="text-zinc-500">
-                    Direct settlement to {restaurant.name}&apos;s verified
-                    PayPal Business account.
-                  </p>
-                </div>
-              )}
+              <CheckoutPaymentGateway
+                ref={paymentGatewayRef}
+                slug={restaurant.slug}
+                gateway={paymentGateway}
+                amountCents={Math.max(50, Math.round(grandTotal * 100))}
+                currency={(
+                  restaurant.paymentConfig.currency || "usd"
+                ).toLowerCase()}
+                customerEmail={customerEmail}
+                restaurantName={restaurant.name}
+                brandColor={brandColor}
+                onTokenized={(res) => setTokenizedPayment(res)}
+              />
             </div>
 
             <button
@@ -4992,7 +5037,7 @@ export default function CustomerOrderingStorefront() {
                 ? "Authorizing Settlement..."
                 : checkoutTiming === "scheduled"
                   ? `Pay $${grandTotal.toFixed(2)} & Schedule for ${checkoutSchedDate}`
-                  : `Authorize $${grandTotal.toFixed(2)} via ${paymentMethod.toUpperCase()}`}
+                  : `Authorize $${grandTotal.toFixed(2)} via ${paymentGateway === "apple_pay" ? "APPLE PAY" : paymentGateway.toUpperCase()}`}
             </button>
           </form>
         </div>

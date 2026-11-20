@@ -12,6 +12,7 @@ import {
   listScheduledReorders,
   listSmsLogs,
   listUsers,
+  syncPlatformSettingFromTurso,
   updateRestaurantTenant,
 } from "@/lib/db";
 import { evaluateRestaurantAvailability } from "@/lib/availability";
@@ -20,12 +21,67 @@ import {
   sanitizePlatformTwilioForClient,
   sanitizeRestaurantForPublicStorefront,
 } from "@/lib/security";
+import {
+  authorizeRestaurantStaff,
+  authorizeStaffSessionPrecheck,
+} from "@/lib/session";
+import type { PortalTabId } from "@/lib/types";
+
+function getRequiredTabsForPatch(
+  updates: Record<string, unknown>
+): PortalTabId[] {
+  const tabs = new Set<PortalTabId>();
+  for (const key of Object.keys(updates)) {
+    if (key === "paymentConfig") {
+      tabs.add("payments");
+    } else if (key === "integrationsConfig") {
+      tabs.add("integrations");
+    } else if (key === "inventoryConfig") {
+      tabs.add("inventory");
+    } else if (key === "commsConfig") {
+      tabs.add("email");
+    } else if (
+      key === "orderingEnabled" ||
+      key === "pauseReason" ||
+      key === "maxOrdersPerHour" ||
+      key === "maxOrdersPerDay" ||
+      key === "minOrderAmount" ||
+      key === "maxOrderAmount" ||
+      key === "prepTimeMinutes" ||
+      key === "advanceNoticeDays" ||
+      key === "advanceNoticeHours" ||
+      key === "advanceNoticeNote" ||
+      key === "autoPauseOnLimit" ||
+      key === "weeklySchedule" ||
+      key === "blackoutWindows" ||
+      key === "features"
+    ) {
+      tabs.add("limits");
+    } else {
+      tabs.add("domain");
+    }
+  }
+  return tabs.size > 0 ? Array.from(tabs) : ["domain"];
+}
 
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const isPublicStorefrontView =
+      req.nextUrl.searchParams.get("view") === "storefront";
+
+    if (!isPublicStorefrontView) {
+      const preAuth = authorizeStaffSessionPrecheck(req);
+      if (!preAuth.ok) {
+        return NextResponse.json(
+          { error: preAuth.error },
+          { status: preAuth.status }
+        );
+      }
+    }
+
     await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const decodedSlug = decodeURIComponent(slug);
@@ -38,8 +94,18 @@ export async function GET(
       );
     }
 
-    const isPublicStorefrontView =
-      req.nextUrl.searchParams.get("view") === "storefront";
+    if (!isPublicStorefrontView) {
+      const authz = authorizeRestaurantStaff(req, restaurant.id);
+      if (!authz.ok) {
+        return NextResponse.json(
+          { error: authz.error },
+          { status: authz.status }
+        );
+      }
+    }
+
+    await syncPlatformSettingFromTurso("platform_integrations");
+    await syncPlatformSettingFromTurso("twilio_gateway");
 
     const menuItems = listMenuItems(restaurant.id);
     const orders = listOrders(restaurant.id);
@@ -112,12 +178,52 @@ export async function PATCH(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const preAuth = authorizeStaffSessionPrecheck(req);
+    if (!preAuth.ok) {
+      return NextResponse.json(
+        { error: preAuth.error },
+        { status: preAuth.status }
+      );
+    }
+
     await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const decodedSlug = decodeURIComponent(slug);
-    const body = await req.json();
+    const existing = getRestaurantBySlugOrDomain(decodedSlug);
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Restaurant not found" },
+        { status: 404 }
+      );
+    }
 
-    const updated = updateRestaurantTenant(decodedSlug, body);
+    const body = await req.json();
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json(
+        { error: "Invalid request payload" },
+        { status: 400 }
+      );
+    }
+
+    const {
+      id: _ignoredId,
+      slug: _ignoredSlug,
+      createdAt: _ignoredCreatedAt,
+      ...safeUpdates
+    } = body as Record<string, unknown>;
+
+    const requiredTabs = getRequiredTabsForPatch(safeUpdates);
+    for (const tab of requiredTabs) {
+      const authz = authorizeRestaurantStaff(req, existing.id, tab);
+      if (!authz.ok) {
+        return NextResponse.json(
+          { error: authz.error },
+          { status: authz.status }
+        );
+      }
+    }
+
+    const updated = updateRestaurantTenant(existing.id, safeUpdates);
     if (!updated) {
       return NextResponse.json(
         { error: "Restaurant not found" },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listMenuItems,
   listOrders,
 } from "@/lib/db";
@@ -171,6 +172,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
     if (!restaurant) {

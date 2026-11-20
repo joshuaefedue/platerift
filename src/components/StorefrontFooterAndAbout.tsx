@@ -142,6 +142,9 @@ export function StorefrontAboutSection({
 }) {
   const pages = getResolvedStorefrontPages(restaurant);
   const { about, footer } = pages;
+  const routeSlug = encodeURIComponent(
+    restaurant.customDomain || restaurant.slug
+  );
 
   if (!about.enabled) return null;
 
@@ -229,7 +232,7 @@ export function StorefrontAboutSection({
                   </div>
 
                   <Link
-                    href={`/store/${restaurant.slug}/about`}
+                    href={`/store/${routeSlug}/about`}
                     style={{ color: brandColor }}
                     className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider hover:underline"
                   >
@@ -296,7 +299,7 @@ export function StorefrontAboutSection({
             {/* Quick Policy & Transparency Strip */}
             <div className="grid grid-cols-3 gap-2.5">
               <Link
-                href={`/store/${restaurant.slug}/about`}
+                href={`/store/${routeSlug}/about`}
                 className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 text-center hover:border-zinc-700 transition"
               >
                 <Info className="h-4 w-4" style={{ color: brandColor }} />
@@ -306,7 +309,7 @@ export function StorefrontAboutSection({
                 <span className="text-[10px] text-zinc-400">Our Story</span>
               </Link>
               <Link
-                href={`/store/${restaurant.slug}/privacy`}
+                href={`/store/${routeSlug}/privacy`}
                 className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 text-center hover:border-zinc-700 transition"
               >
                 <ShieldCheck
@@ -319,7 +322,7 @@ export function StorefrontAboutSection({
                 <span className="text-[10px] text-zinc-400">Data & SMS</span>
               </Link>
               <Link
-                href={`/store/${restaurant.slug}/terms`}
+                href={`/store/${routeSlug}/terms`}
                 className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 text-center hover:border-zinc-700 transition"
               >
                 <Scale className="h-4 w-4" style={{ color: brandColor }} />
@@ -347,6 +350,9 @@ export function StorefrontFooter({
 }) {
   const pages = getResolvedStorefrontPages(restaurant);
   const { footer, orderingPolicy } = pages;
+  const routeSlug = encodeURIComponent(
+    restaurant.customDomain || restaurant.slug
+  );
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
@@ -406,7 +412,7 @@ export function StorefrontFooter({
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-12">
           {/* Col 1 (4 cols): Brand Logo, Tagline, Domain Badge & Newsletter */}
           <div className="lg:col-span-4 space-y-4">
-            <Link href={`/store/${restaurant.slug}`} className="inline-block">
+            <Link href={`/store/${routeSlug}`} className="inline-block">
               <StorefrontBrandLogo
                 restaurant={restaurant}
                 brandColor={brandColor}
@@ -527,7 +533,7 @@ export function StorefrontFooter({
             <ul className="space-y-2.5 text-xs">
               <li>
                 <Link
-                  href={`/store/${restaurant.slug}`}
+                  href={`/store/${routeSlug}`}
                   className="text-zinc-300 hover:text-white transition"
                 >
                   Online Ordering Menu
@@ -535,7 +541,7 @@ export function StorefrontFooter({
               </li>
               <li>
                 <Link
-                  href={`/store/${restaurant.slug}#about-section`}
+                  href={`/store/${routeSlug}#about-section`}
                   className="text-zinc-300 hover:text-white transition"
                 >
                   About {restaurant.name}
@@ -543,7 +549,7 @@ export function StorefrontFooter({
               </li>
               <li>
                 <Link
-                  href={`/store/${restaurant.slug}/about`}
+                  href={`/store/${routeSlug}/about`}
                   className="text-zinc-300 hover:text-white transition"
                 >
                   Our Culinary Story
@@ -551,7 +557,7 @@ export function StorefrontFooter({
               </li>
               <li>
                 <Link
-                  href={`/store/${restaurant.slug}#provisioning-desk`}
+                  href={`/store/${routeSlug}#provisioning-desk`}
                   className="text-zinc-300 hover:text-white transition"
                 >
                   Provisioning Cart & Schedule
@@ -587,7 +593,7 @@ export function StorefrontFooter({
             <ul className="space-y-2.5 text-xs">
               <li>
                 <Link
-                  href={`/store/${restaurant.slug}/privacy`}
+                  href={`/store/${routeSlug}/privacy`}
                   className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white transition"
                 >
                   <ShieldCheck
@@ -599,7 +605,7 @@ export function StorefrontFooter({
               </li>
               <li>
                 <Link
-                  href={`/store/${restaurant.slug}/terms`}
+                  href={`/store/${routeSlug}/terms`}
                   className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white transition"
                 >
                   <Scale
@@ -611,7 +617,7 @@ export function StorefrontFooter({
               </li>
               <li>
                 <Link
-                  href={`/store/${restaurant.slug}/terms#refund-policy`}
+                  href={`/store/${routeSlug}/terms#refund-policy`}
                   className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white transition"
                 >
                   <FileText
@@ -623,7 +629,7 @@ export function StorefrontFooter({
               </li>
               <li>
                 <Link
-                  href={`/store/${restaurant.slug}/terms#allergen-policy`}
+                  href={`/store/${routeSlug}/terms#allergen-policy`}
                   className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white transition"
                 >
                   <UtensilsCrossed
@@ -704,7 +710,7 @@ export function StorefrontFooter({
 
             <div className="pt-2">
               <Link
-                href={`/dashboard/${restaurant.slug}`}
+                href={`/dashboard/${routeSlug}`}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-[11px] font-semibold text-zinc-200 hover:border-zinc-600 hover:text-white transition"
               >
                 <LayoutDashboard
@@ -722,19 +728,19 @@ export function StorefrontFooter({
           <p>{footer.copyrightText}</p>
           <div className="flex flex-wrap items-center gap-4">
             <Link
-              href={`/store/${restaurant.slug}/about`}
+              href={`/store/${routeSlug}/about`}
               className="hover:text-zinc-300 transition"
             >
               About Us
             </Link>
             <Link
-              href={`/store/${restaurant.slug}/privacy`}
+              href={`/store/${routeSlug}/privacy`}
               className="hover:text-zinc-300 transition"
             >
               Privacy Policy
             </Link>
             <Link
-              href={`/store/${restaurant.slug}/terms`}
+              href={`/store/${routeSlug}/terms`}
               className="hover:text-zinc-300 transition"
             >
               Terms & Conditions
@@ -757,6 +763,13 @@ export function StorefrontStandalonePageView({
   slug: string;
   pageType: "about" | "privacy" | "terms";
 }) {
+  let decodedSlug = slug;
+  try {
+    decodedSlug = decodeURIComponent(slug);
+  } catch {
+    decodedSlug = slug;
+  }
+
   const [restaurant, setRestaurant] = useState<RestaurantTenant | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -765,7 +778,7 @@ export function StorefrontStandalonePageView({
       try {
         setLoading(true);
         const res = await fetch(
-          `/api/restaurants/${encodeURIComponent(slug)}`,
+          `/api/restaurants/${encodeURIComponent(decodedSlug)}?view=storefront`,
           { cache: "no-store" }
         );
         if (res.ok) {
@@ -777,7 +790,7 @@ export function StorefrontStandalonePageView({
       }
     }
     load();
-  }, [slug]);
+  }, [decodedSlug]);
 
   if (loading) {
     return (
@@ -805,6 +818,9 @@ export function StorefrontStandalonePageView({
   }
 
   const brandColor = restaurant.primaryColor || "#d4af37";
+  const routeSlug = encodeURIComponent(
+    restaurant.customDomain || restaurant.slug
+  );
   const pages = getResolvedStorefrontPages(restaurant);
   const { about, privacyPolicy, termsAndConditions, orderingPolicy, footer } =
     pages;
@@ -830,7 +846,7 @@ export function StorefrontStandalonePageView({
                 https://{restaurant.customDomain}
               </span>
               <Link
-                href={`/dashboard/${restaurant.slug}`}
+                href={`/dashboard/${routeSlug}`}
                 className="inline-flex items-center gap-1 rounded-full bg-zinc-900 border border-zinc-700 px-2.5 py-0.5 text-[10px] font-semibold text-white hover:border-amber-400 transition"
               >
                 <LayoutDashboard className="h-2.5 w-2.5" /> Edit in Owner Portal
@@ -842,7 +858,7 @@ export function StorefrontStandalonePageView({
         {/* Sticky Navbar */}
         <nav className="sticky top-0 z-40 bg-[#0b0c10]/90 backdrop-blur-md border-b border-zinc-800/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
-            <Link href={`/store/${restaurant.slug}`} className="min-w-0">
+            <Link href={`/store/${routeSlug}`} className="min-w-0">
               <StorefrontBrandLogo
                 restaurant={restaurant}
                 brandColor={brandColor}
@@ -852,14 +868,14 @@ export function StorefrontStandalonePageView({
 
             <div className="no-scrollbar flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
               <Link
-                href={`/store/${restaurant.slug}`}
+                href={`/store/${routeSlug}`}
                 className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900 px-3 sm:px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white transition"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span>Back to Menu</span>
               </Link>
               <Link
-                href={`/store/${restaurant.slug}/about`}
+                href={`/store/${routeSlug}/about`}
                 style={
                   pageType === "about"
                     ? { backgroundColor: brandColor, color: "#000" }
@@ -874,7 +890,7 @@ export function StorefrontStandalonePageView({
                 About Us
               </Link>
               <Link
-                href={`/store/${restaurant.slug}/privacy`}
+                href={`/store/${routeSlug}/privacy`}
                 style={
                   pageType === "privacy"
                     ? { backgroundColor: brandColor, color: "#000" }
@@ -889,7 +905,7 @@ export function StorefrontStandalonePageView({
                 Privacy Policy
               </Link>
               <Link
-                href={`/store/${restaurant.slug}/terms`}
+                href={`/store/${routeSlug}/terms`}
                 style={
                   pageType === "terms"
                     ? { backgroundColor: brandColor, color: "#000" }
@@ -930,7 +946,7 @@ export function StorefrontStandalonePageView({
                     </h3>
                   </div>
                   <Link
-                    href={`/store/${restaurant.slug}`}
+                    href={`/store/${routeSlug}`}
                     style={{ backgroundColor: brandColor, color: "#000" }}
                     className="rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider hover:opacity-90 transition"
                   >

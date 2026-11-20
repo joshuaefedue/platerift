@@ -10,11 +10,16 @@ import {
   updatePlatformIntegrationsConfig,
   updateRestaurantTenant,
 } from "@/lib/db";
+import { authorizePlatformAdmin } from "@/lib/session";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authz = authorizePlatformAdmin(req);
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     await hydrateFromTursoIfNeeded();
-    await syncPlatformSettingFromTurso("platform_integrations");
     await syncPlatformSettingFromTurso("platform_integrations");
     const config = getPlatformIntegrationsConfig();
     const restaurants = listRestaurants();
@@ -33,6 +38,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authz = authorizePlatformAdmin(req);
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     await hydrateFromTursoIfNeeded();
     await syncPlatformSettingFromTurso("platform_integrations");
     const body = await req.json();
@@ -133,4 +143,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

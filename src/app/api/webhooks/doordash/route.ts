@@ -1,9 +1,13 @@
+import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  commitToTurso,
   getPlatformIntegrationsConfig,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listOrders,
   listRestaurants,
+  syncPlatformSettingFromTurso,
   updateOrderIntegrationFields,
   updateOrderStatus,
   updateRestaurantTenant,
@@ -15,33 +19,76 @@ import {
 import { resolveDoorDashCredentials } from "@/lib/doordashDriveClient";
 import { OrderDeliveryTracking } from "@/lib/types";
 
+function timingSafeEqualStrings(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 export async function GET() {
-  const platformConfig = getPlatformIntegrationsConfig();
-  const creds = resolveDoorDashCredentials(
-    undefined,
-    platformConfig.doordashDrive
-  );
-  return NextResponse.json({
-    endpoint: "/api/webhooks/doordash",
-    provider: "DoorDash Drive API v2",
-    status: platformConfig.doordashDrive.setupCompleted
-      ? "active"
-      : "awaiting_admin_setup",
-    mode: platformConfig.doordashDrive.mode,
-    credentialsConfigured: creds.isRealKey,
-    credentialSource: creds.source,
-    supportedEvents: [
-      "DASHER_CONFIRMED",
-      "DASHER_CONFIRMED_STORE_ARRIVAL",
-      "DELIVERY_PICKED_UP",
-      "DELIVERY_DELIVERED",
-      "DELIVERY_CANCELLED",
-    ],
-  });
+  try {
+    await hydrateFromTursoIfNeeded();
+    await syncPlatformSettingFromTurso("platform_integrations");
+    const platformConfig = getPlatformIntegrationsConfig();
+    const creds = resolveDoorDashCredentials(
+      undefined,
+      platformConfig.doordashDrive
+    );
+    return NextResponse.json({
+      endpoint: "https://platerift.com/api/webhooks/doordash",
+      provider: "DoorDash Drive API v2",
+      status: platformConfig.doordashDrive.setupCompleted
+        ? "active"
+        : "awaiting_admin_setup",
+      mode: platformConfig.doordashDrive.mode,
+      credentialsConfigured: creds.isRealKey,
+      credentialSource: creds.source,
+      supportedEvents: [
+        "DASHER_CONFIRMED",
+        "DASHER_CONFIRMED_STORE_ARRIVAL",
+        "DELIVERY_PICKED_UP",
+        "DELIVERY_DELIVERED",
+        "DELIVERY_CANCELLED",
+      ],
+    });
+  } catch (error) {
+    console.error("DoorDash Drive webhook GET error:", error);
+    return NextResponse.json(
+      { error: "Failed to load DoorDash Drive webhook status" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const envSecret = (process.env.DOORDASH_WEBHOOK_SECRET || "").trim();
+    if (envSecret) {
+      const authHeader = req.headers.get("authorization") || "";
+      const bearerToken = authHeader.toLowerCase().startsWith("bearer ")
+        ? authHeader.slice(7).trim()
+        : "";
+      const headerSecret = (
+        req.headers.get("x-doordash-webhook-secret") || ""
+      ).trim();
+      const validBearer = bearerToken
+        ? timingSafeEqualStrings(bearerToken, envSecret)
+        : false;
+      const validHeader = headerSecret
+        ? timingSafeEqualStrings(headerSecret, envSecret)
+        : false;
+      if (!validBearer && !validHeader) {
+        return NextResponse.json(
+          { error: "Unauthorized DoorDash webhook request" },
+          { status: 401 }
+        );
+      }
+    }
+
+    await hydrateFromTursoIfNeeded();
+    await syncPlatformSettingFromTurso("platform_integrations");
+
     const body = await req.json();
     const eventName = String(
       body.event_name || body.event_category || body.status || "DASHER_CONFIRMED"
@@ -173,6 +220,7 @@ export async function POST(req: NextRequest) {
         activityLogs: nextLogs,
       },
     });
+    await commitToTurso();
 
     return NextResponse.json({
       received: true,

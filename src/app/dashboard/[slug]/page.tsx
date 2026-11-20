@@ -16,6 +16,8 @@ import {
   ExternalLink,
   Globe,
   ImagePlus,
+  Lock,
+  LogOut,
   Mail,
   Menu,
   MessageSquare,
@@ -68,9 +70,25 @@ import { buildDefaultVariantAndSideGroups } from "@/lib/menuVariantsAndSides";
 
 type ActiveTab = PortalTabId;
 
+interface ActiveStaffSession {
+  sub: string;
+  actor: "staff" | "customer";
+  scope: "platform" | "restaurant" | "customer";
+  role: string;
+  email: string;
+  name: string;
+  restaurantId: string | null;
+}
+
 export default function RestaurantOwnerPortal() {
   const params = useParams<{ slug: string }>();
-  const slug = params?.slug || "bella-napoli";
+  const rawSlug = params?.slug || "bella-napoli";
+  let slug = rawSlug;
+  try {
+    slug = decodeURIComponent(rawSlug);
+  } catch {
+    slug = rawSlug;
+  }
 
   const [restaurant, setRestaurant] = useState<RestaurantTenant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -87,6 +105,18 @@ export default function RestaurantOwnerPortal() {
   const [platformIntegrations, setPlatformIntegrations] =
     useState<PlatformIntegrationsConfig | null>(null);
   const [loggedInStaff, setLoggedInStaff] = useState<UserAccount | null>(null);
+  const [activeSession, setActiveSession] = useState<ActiveStaffSession | null>(
+    null
+  );
+  const [strictAuthEnforced, setStrictAuthEnforced] = useState(false);
+  const [authGateError, setAuthGateError] = useState<string | null>(null);
+  const [authGateStatus, setAuthGateStatus] = useState<401 | 403 | null>(null);
+  const [authGateBusy, setAuthGateBusy] = useState(false);
+  const [publicPreview, setPublicPreview] = useState<{
+    name: string;
+    logoEmoji: string;
+    customDomain: string;
+  } | null>(null);
   const [staffLoginInput, setStaffLoginInput] = useState("");
   const [simulatedRole, setSimulatedRole] =
     useState<RestaurantRole>("restaurant_owner");
@@ -223,10 +253,53 @@ export default function RestaurantOwnerPortal() {
   const [staffTitle, setStaffTitle] = useState("");
   const [staffPin, setStaffPin] = useState("5501");
 
-  const notify = (msg: string) => {
+  const notify = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 4200);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabParam = searchParams.get("tab");
+    const oauthParam = searchParams.get("oauth");
+
+    const validTabs: PortalTabId[] = [
+      "orders",
+      "menu",
+      "inventory",
+      "limits",
+      "payments",
+      "integrations",
+      "customers",
+      "sms",
+      "email",
+      "domain",
+      "team",
+    ];
+    if (tabParam && (validTabs as string[]).includes(tabParam)) {
+      setActiveTab(tabParam as ActiveTab);
+    } else if (tabParam === "comms") {
+      setActiveTab("sms");
+    }
+
+    if (oauthParam === "square_connected") {
+      notify("✅ Square POS OAuth 2.0 connected and synced!");
+    } else if (oauthParam === "clover_connected") {
+      notify("✅ Clover POS OAuth 2.0 + PAKMS key connected!");
+    }
+
+    if (tabParam !== null || oauthParam !== null) {
+      searchParams.delete("tab");
+      searchParams.delete("oauth");
+      const nextSearch = searchParams.toString();
+      const nextUrl =
+        window.location.pathname +
+        (nextSearch ? `?${nextSearch}` : "") +
+        window.location.hash;
+      window.history.replaceState({}, "", nextUrl);
+    }
+  }, [notify]);
 
   const loadPortalData = useCallback(
     async (overrideDay?: string, overrideTime?: string) => {
@@ -235,12 +308,23 @@ export default function RestaurantOwnerPortal() {
         if (overrideDay) query.set("simDay", overrideDay);
         if (overrideTime) query.set("simTime", overrideTime);
 
-        const res = await fetch(
-          `/api/restaurants/${encodeURIComponent(slug)}?${query.toString()}`,
-          { cache: "no-store" }
-        );
-        const data = await res.json();
+        const [authRes, res] = await Promise.all([
+          fetch("/api/auth", { cache: "no-store" }),
+          fetch(
+            `/api/restaurants/${encodeURIComponent(slug)}?${query.toString()}`,
+            { cache: "no-store" }
+          ),
+        ]);
+
+        const authData = await authRes.json().catch(() => null);
+        if (authData) {
+          setStrictAuthEnforced(Boolean(authData.strictAuthEnforced));
+        }
+
+        const data = await res.json().catch(() => ({}));
         if (res.ok && data.restaurant) {
+          setAuthGateError(null);
+          setAuthGateStatus(null);
           setRestaurant(data.restaurant);
           setMenuItems(data.menuItems || []);
           setOrders(data.orders || []);
@@ -252,6 +336,82 @@ export default function RestaurantOwnerPortal() {
           setPlatformTwilio(data.platformTwilio || null);
           setPlatformIntegrations(data.platformIntegrations || null);
           setAvailability(data.availability || null);
+
+          const session = authData?.authenticated
+            ? (authData.session as ActiveStaffSession | null)
+            : null;
+          if (
+            session &&
+            session.actor === "staff" &&
+            (session.scope === "platform" ||
+              session.restaurantId === data.restaurant.id)
+          ) {
+            setActiveSession(session);
+            const matchedStaff =
+              (data.teamMembers || []).find(
+                (m: UserAccount) => m.id === session.sub
+              ) || null;
+            setLoggedInStaff(
+              matchedStaff || {
+                id: session.sub,
+                scope:
+                  session.scope === "platform" ? "platform" : "restaurant",
+                restaurantId: session.restaurantId,
+                name: session.name,
+                email: session.email,
+                phone: "",
+                role: session.role as UserRole,
+                status: "active",
+                title:
+                  ROLE_DEFINITIONS[session.role as UserRole]?.label ||
+                  session.role,
+                pinCode: "",
+                permissions:
+                  ROLE_DEFINITIONS[session.role as UserRole]
+                    ?.defaultPermissions || [],
+                lastActiveAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+              }
+            );
+            const roleDef = ROLE_DEFINITIONS[session.role as UserRole];
+            if (session.scope === "restaurant" && roleDef) {
+              setSimulatedRole(session.role as RestaurantRole);
+              setActiveTab((prevTab) =>
+                roleDef.allowedPortalTabs.includes(prevTab)
+                  ? prevTab
+                  : roleDef.allowedPortalTabs[0] || "orders"
+              );
+            }
+          } else {
+            setActiveSession(null);
+            setLoggedInStaff(null);
+          }
+        } else if (res.status === 401 || res.status === 403) {
+          setRestaurant(null);
+          setAuthGateStatus(res.status);
+          setAuthGateError(
+            data?.error ||
+              "Staff sign-in is required to access this restaurant portal."
+          );
+          if (authData?.authenticated && authData.session) {
+            setActiveSession(authData.session);
+          } else {
+            setActiveSession(null);
+          }
+          const previewRes = await fetch(
+            `/api/restaurants/${encodeURIComponent(slug)}?view=storefront`,
+            { cache: "no-store" }
+          ).catch(() => null);
+          if (previewRes?.ok) {
+            const previewData = await previewRes.json().catch(() => null);
+            if (previewData?.restaurant) {
+              setPublicPreview({
+                name: previewData.restaurant.name,
+                logoEmoji: previewData.restaurant.logoEmoji,
+                customDomain: previewData.restaurant.customDomain,
+              });
+            }
+          }
         }
       } catch (e) {
         console.error("Failed to load restaurant portal:", e);
@@ -266,12 +426,158 @@ export default function RestaurantOwnerPortal() {
     loadPortalData();
   }, [loadPortalData]);
 
+  const handleStaffSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffLoginInput.trim()) return;
+    setAuthGateBusy(true);
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actor: "staff",
+          emailOrPin: staffLoginInput.trim(),
+          restaurantId: restaurant?.id || slug,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.user) {
+        setLoggedInStaff(data.user);
+        setStaffLoginInput("");
+        setAuthGateError(null);
+        setAuthGateStatus(null);
+        if (data.user.scope === "restaurant") {
+          handleRoleSwitch(data.user.role as RestaurantRole);
+        }
+        await loadPortalData(simDay || undefined, simTime || undefined);
+        notify(
+          `🔐 Authenticated as ${data.user.name} (${data.user.title || data.user.role})`
+        );
+      } else {
+        const msg = data.error || "Invalid staff PIN or email";
+        setAuthGateError(msg);
+        notify(`⚠️ ${msg}`);
+      }
+    } finally {
+      setAuthGateBusy(false);
+    }
+  };
+
+  const handleStaffSignOut = async () => {
+    try {
+      await fetch("/api/auth", { method: "DELETE" });
+      setLoggedInStaff(null);
+      setActiveSession(null);
+      notify("Signed out of staff session.");
+      await loadPortalData(simDay || undefined, simTime || undefined);
+    } catch {
+      notify("⚠️ Failed to sign out cleanly.");
+    }
+  };
+
+  const handlePortalAuthError = (
+    status: number,
+    data?: { error?: string }
+  ) => {
+    if (status === 401 || status === 403) {
+      const msg =
+        data?.error ||
+        "You do not have permission or an active staff session for this action.";
+      setAuthGateStatus(status);
+      setAuthGateError(msg);
+      notify(`🔐 ${msg}`);
+      return true;
+    }
+    if (data?.error) {
+      notify(`⚠️ ${data.error}`);
+    }
+    return false;
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
         <div className="flex items-center gap-3 text-sm text-slate-300">
           <RefreshCw className="h-5 w-5 animate-spin text-orange-500" />
           Loading Restaurant Owner Portal...
+        </div>
+      </div>
+    );
+  }
+
+  if (!restaurant && authGateError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-white">
+        <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/15 border border-orange-500/30 text-2xl">
+              {publicPreview?.logoEmoji || <Lock className="h-5 w-5 text-orange-400" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-orange-400">
+                Staff Portal Access Required
+              </p>
+              <h2 className="truncate text-lg font-bold text-white">
+                {publicPreview?.name || slug}
+              </h2>
+              {publicPreview?.customDomain && (
+                <p className="truncate font-mono text-[11px] text-slate-400">
+                  {publicPreview.customDomain}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-200">
+            {authGateError}
+          </div>
+
+          <form onSubmit={handleStaffSignIn} className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                Staff Email or 4-Digit PIN
+              </label>
+              <input
+                type="text"
+                autoFocus
+                placeholder="e.g. 1101, 0001, or marco@bellanapoli.com"
+                value={staffLoginInput}
+                onChange={(e) => setStaffLoginInput(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm font-mono text-white focus:border-orange-500 focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={authGateBusy || !staffLoginInput.trim()}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2.5 text-xs font-semibold text-white hover:from-orange-600 hover:to-rose-700 disabled:opacity-50 transition"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              {authGateBusy ? "Signing In..." : "Sign In to Restaurant Portal"}
+            </button>
+          </form>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3 text-xs">
+            {authGateStatus === 403 && activeSession ? (
+              <button
+                type="button"
+                onClick={handleStaffSignOut}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-rose-500/40 hover:text-rose-300"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign Out Current Session
+              </button>
+            ) : (
+              <span className="text-[11px] text-slate-500">
+                HTTP-only signed session
+              </span>
+            )}
+            <Link
+              href="/admin"
+              className="text-orange-400 hover:underline font-medium"
+            >
+              Super Admin Console →
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -304,9 +610,12 @@ export default function RestaurantOwnerPortal() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       await loadPortalData(simDay || undefined, simTime || undefined);
       notify(successMsg);
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -322,7 +631,7 @@ export default function RestaurantOwnerPortal() {
         body: JSON.stringify({ orderId, status: nextStatus }),
       }
     );
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       await loadPortalData(simDay || undefined, simTime || undefined);
       if (data.smsSent) {
@@ -332,6 +641,8 @@ export default function RestaurantOwnerPortal() {
       } else {
         notify(`✅ Order status updated to "${nextStatus.toUpperCase()}"`);
       }
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -353,6 +664,7 @@ export default function RestaurantOwnerPortal() {
         }),
       }
     );
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       await loadPortalData(simDay || undefined, simTime || undefined);
       notify(
@@ -360,11 +672,13 @@ export default function RestaurantOwnerPortal() {
           ? `✅ "${item.name}" is now AVAILABLE on the menu!`
           : `🚫 "${item.name}" marked UNAVAILABLE (86'd) on the live storefront.`
       );
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
   const handleUpdateItemReason = async (item: MenuItem, reason: string) => {
-    await fetch(`/api/restaurants/${encodeURIComponent(slug)}/menu`, {
+    const res = await fetch(`/api/restaurants/${encodeURIComponent(slug)}/menu`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -372,8 +686,13 @@ export default function RestaurantOwnerPortal() {
         unavailableReason: reason,
       }),
     });
-    await loadPortalData(simDay || undefined, simTime || undefined);
-    notify(`Updated unavailable note for "${item.name}"`);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      await loadPortalData(simDay || undefined, simTime || undefined);
+      notify(`Updated unavailable note for "${item.name}"`);
+    } else {
+      handlePortalAuthError(res.status, data);
+    }
   };
 
   const handleNewItemPhotoUpload = (
@@ -412,9 +731,12 @@ export default function RestaurantOwnerPortal() {
             }),
           }
         );
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
           await loadPortalData(simDay || undefined, simTime || undefined);
           notify(`📸 Updated photo for "${item.name}"!`);
+        } else {
+          handlePortalAuthError(res.status, data);
         }
       }
     };
@@ -447,6 +769,7 @@ export default function RestaurantOwnerPortal() {
         }),
       }
     );
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       const addedName = newItemName;
       setNewItemName("");
@@ -459,6 +782,8 @@ export default function RestaurantOwnerPortal() {
       notify(
         `🍽️ Added "${addedName}" with Variant & Side Options to ${restaurant.name}'s menu!`
       );
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -467,12 +792,15 @@ export default function RestaurantOwnerPortal() {
       `/api/restaurants/${encodeURIComponent(slug)}/menu?itemId=${encodeURIComponent(itemId)}`,
       { method: "DELETE" }
     );
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       if (editingMenuItem?.id === itemId) {
         setEditingMenuItem(null);
       }
       await loadPortalData(simDay || undefined, simTime || undefined);
       notify(`🗑️ Deleted "${itemName}" from menu.`);
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -540,12 +868,15 @@ export default function RestaurantOwnerPortal() {
       }
     );
 
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       const savedName = editingMenuItem.name;
       setEditingMenuItem(null);
       setEditItemImageFileName("");
       await loadPortalData(simDay || undefined, simTime || undefined);
       notify(`✅ Updated "${savedName}" on ${restaurant.name}'s live menu!`);
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -608,6 +939,7 @@ export default function RestaurantOwnerPortal() {
         }),
       }
     );
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       setNewCustName("");
       setNewCustEmail("");
@@ -615,6 +947,8 @@ export default function RestaurantOwnerPortal() {
       setNewCustNotes("");
       await loadPortalData(simDay || undefined, simTime || undefined);
       notify(`👤 Added customer "${newCustName}" to CRM!`);
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -638,7 +972,7 @@ export default function RestaurantOwnerPortal() {
         }),
       }
     );
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       await loadPortalData(simDay || undefined, simTime || undefined);
       notify(
@@ -646,6 +980,8 @@ export default function RestaurantOwnerPortal() {
           ? `📲 Broadcast SMS dispatched to ${data.sentCount} opted-in customers!`
           : `📲 Instant SMS sent to ${manualSmsPhone}!`
       );
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -668,11 +1004,14 @@ export default function RestaurantOwnerPortal() {
         }),
       }
     );
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       setCampName("");
       setCampSubject("");
       await loadPortalData(simDay || undefined, simTime || undefined);
       notify(`📧 Email campaign "${campName}" dispatched to ${campSegment.toUpperCase()} segment!`);
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -693,6 +1032,7 @@ export default function RestaurantOwnerPortal() {
         pinCode: staffPin,
       }),
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       setStaffName("");
       setStaffEmail("");
@@ -701,6 +1041,8 @@ export default function RestaurantOwnerPortal() {
       notify(
         `👤 Added "${staffName}" as ${ROLE_DEFINITIONS[staffRole].label}!`
       );
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -713,9 +1055,12 @@ export default function RestaurantOwnerPortal() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, ...updates }),
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       await loadPortalData(simDay || undefined, simTime || undefined);
       notify("✅ Updated team member role & permissions!");
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -724,9 +1069,12 @@ export default function RestaurantOwnerPortal() {
       `/api/users?userId=${encodeURIComponent(userId)}`,
       { method: "DELETE" }
     );
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       await loadPortalData(simDay || undefined, simTime || undefined);
       notify(`🗑️ Removed "${name}" from restaurant team.`);
+    } else {
+      handlePortalAuthError(res.status, data);
     }
   };
 
@@ -1135,14 +1483,39 @@ export default function RestaurantOwnerPortal() {
 
             {/* Active Staff Role Switcher & PIN Auth */}
             <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-2.5 space-y-2">
-              <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400">
-                <span>
-                  {loggedInStaff
+              <div className="flex items-center justify-between gap-2 text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                <span className="truncate">
+                  {activeSession
+                    ? `Session: ${activeSession.name}`
+                    : loggedInStaff
                     ? `Signed In: ${loggedInStaff.name}`
                     : "Staff Role & PIN Login:"}
                 </span>
-                <ShieldCheck className="h-3.5 w-3.5 text-orange-400" />
+                {activeSession ? (
+                  <button
+                    type="button"
+                    onClick={handleStaffSignOut}
+                    className="inline-flex items-center gap-1 rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition shrink-0"
+                    title="Sign Out"
+                  >
+                    <LogOut className="h-2.5 w-2.5" />
+                    Sign Out
+                  </button>
+                ) : (
+                  <ShieldCheck className="h-3.5 w-3.5 text-orange-400 shrink-0" />
+                )}
               </div>
+              {activeSession && (
+                <div className="flex items-center justify-between gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px]">
+                  <span className="truncate font-semibold text-emerald-300">
+                    {ROLE_DEFINITIONS[activeSession.role as UserRole]?.label ||
+                      activeSession.role}
+                  </span>
+                  <span className="shrink-0 font-mono text-[9px] uppercase text-emerald-400">
+                    Cookie Active
+                  </span>
+                </div>
+              )}
               <select
                 value={simulatedRole}
                 onChange={(e) =>
@@ -1167,30 +1540,7 @@ export default function RestaurantOwnerPortal() {
                 </option>
               </select>
               <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!staffLoginInput.trim()) return;
-                  const res = await fetch("/api/auth", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      actor: "staff",
-                      emailOrPin: staffLoginInput.trim(),
-                      restaurantId: restaurant.id,
-                    }),
-                  });
-                  const data = await res.json();
-                  if (res.ok && data.user) {
-                    setLoggedInStaff(data.user);
-                    setStaffLoginInput("");
-                    handleRoleSwitch(data.user.role as RestaurantRole);
-                    notify(
-                      `🔐 Authenticated as ${data.user.name} (${data.user.title})`
-                    );
-                  } else {
-                    notify(data.error || "Invalid staff PIN or email");
-                  }
-                }}
+                onSubmit={handleStaffSignIn}
                 className="flex gap-1.5"
               >
                 <input
@@ -1202,9 +1552,10 @@ export default function RestaurantOwnerPortal() {
                 />
                 <button
                   type="submit"
-                  className="rounded-lg bg-orange-500 px-2.5 py-1 text-[10px] font-bold uppercase text-white hover:bg-orange-600 shrink-0"
+                  disabled={authGateBusy}
+                  className="rounded-lg bg-orange-500 px-2.5 py-1 text-[10px] font-bold uppercase text-white hover:bg-orange-600 disabled:opacity-50 shrink-0"
                 >
-                  Auth
+                  {authGateBusy ? "..." : "Auth"}
                 </button>
               </form>
             </div>
@@ -1316,7 +1667,32 @@ export default function RestaurantOwnerPortal() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {activeSession ? (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs">
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  <span className="font-semibold text-white">
+                    {activeSession.name}
+                  </span>
+                  <span className="hidden md:inline rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                    {ROLE_DEFINITIONS[activeSession.role as UserRole]?.label ||
+                      activeSession.role}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleStaffSignOut}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition"
+                  >
+                    <LogOut className="h-3 w-3" />
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <span className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1.5 text-[11px] font-medium text-slate-400">
+                  <Lock className="h-3 w-3 text-orange-400" />
+                  {strictAuthEnforced ? "Sign In Required" : "Demo Mode"}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => setShowOwnerAssistant((prev) => !prev)}
@@ -1347,6 +1723,17 @@ export default function RestaurantOwnerPortal() {
         </header>
 
         <main className="mx-auto w-full max-w-6xl px-4 py-5 pb-24 sm:px-6 sm:py-8 lg:pb-8">
+          {authGateError && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+              <div className="flex items-center gap-2.5">
+                <Lock className="h-4 w-4 shrink-0 text-amber-400" />
+                <span>{authGateError}</span>
+              </div>
+              <span className="font-mono text-[10px] text-amber-300">
+                Use Staff PIN / Email in sidebar to switch or authenticate
+              </span>
+            </div>
+          )}
           {/* Beginner-Friendly Quick Action Cards & Step-by-Step Guide */}
           <OwnerBeginnerGuideBar
             activeTab={activeTab}
@@ -1898,7 +2285,7 @@ export default function RestaurantOwnerPortal() {
                                                   }),
                                                 }
                                               );
-                                              const data = await res.json();
+                                              const data = await res.json().catch(() => ({}));
                                               if (
                                                 res.ok &&
                                                 Array.isArray(data.orders)
@@ -1907,6 +2294,8 @@ export default function RestaurantOwnerPortal() {
                                                 notify(
                                                   `🚗 Updated DoorDash Driver status for Order #${ord.orderNumber}`
                                                 );
+                                              } else if (!res.ok) {
+                                                handlePortalAuthError(res.status, data);
                                               }
                                             }}
                                             className="rounded bg-rose-500/25 border border-rose-500/40 px-1.5 py-1 text-[10px] font-bold text-rose-200 hover:bg-rose-500/35"
@@ -1933,14 +2322,18 @@ export default function RestaurantOwnerPortal() {
                                                   }),
                                                 }
                                               );
-                                              const data = await res.json();
-                                              if (Array.isArray(data.orders)) {
-                                                setOrders(data.orders);
+                                              const data = await res.json().catch(() => ({}));
+                                              if (!res.ok) {
+                                                handlePortalAuthError(res.status, data);
+                                              } else {
+                                                if (Array.isArray(data.orders)) {
+                                                  setOrders(data.orders);
+                                                }
+                                                notify(
+                                                  data.message ||
+                                                    `🔄 Synced DoorDash Drive API status for #${ord.orderNumber}`
+                                                );
                                               }
-                                              notify(
-                                                data.message ||
-                                                  `🔄 Synced DoorDash Drive API status for #${ord.orderNumber}`
-                                              );
                                             }}
                                             className="rounded bg-slate-900 border border-slate-700 px-1.5 py-1 text-[10px] font-semibold text-slate-300 hover:text-white"
                                           >
@@ -1968,12 +2361,14 @@ export default function RestaurantOwnerPortal() {
                                           }),
                                         }
                                       );
-                                      const data = await res.json();
+                                      const data = await res.json().catch(() => ({}));
                                       if (res.ok && Array.isArray(data.orders)) {
                                         setOrders(data.orders);
                                         notify(
                                           `🚗 DoorDash Driver dispatched for Order #${ord.orderNumber}!`
                                         );
+                                      } else if (!res.ok) {
+                                        handlePortalAuthError(res.status, data);
                                       }
                                     }}
                                     className="w-full rounded bg-rose-500/20 border border-rose-500/40 px-2 py-1 text-[10px] font-bold text-rose-200 hover:bg-rose-500/30"
@@ -2190,6 +2585,7 @@ export default function RestaurantOwnerPortal() {
                                   }),
                                 }
                               );
+                              const data = await res.json().catch(() => ({}));
                               if (res.ok) {
                                 await loadPortalData(
                                   simDay || undefined,
@@ -2198,6 +2594,8 @@ export default function RestaurantOwnerPortal() {
                                 notify(
                                   `🚀 Dispatched scheduled order "${sched.title}" into Live Kitchen Queue & sent SMS!`
                                 );
+                              } else {
+                                handlePortalAuthError(res.status, data);
                               }
                             }}
                             className="rounded-lg bg-orange-500 px-3.5 py-2 text-xs font-semibold text-white hover:bg-orange-600 transition"

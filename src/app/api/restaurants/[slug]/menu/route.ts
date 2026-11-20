@@ -5,14 +5,27 @@ import {
   deleteMenuItem,
   getRestaurantBySlugOrDomain,
   hydrateFromTursoIfNeeded,
+  listMenuItems,
   updateMenuItem,
 } from "@/lib/db";
+import {
+  authorizeRestaurantStaff,
+  authorizeStaffSessionPrecheck,
+} from "@/lib/session";
 
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const preAuth = authorizeStaffSessionPrecheck(req);
+    if (!preAuth.ok) {
+      return NextResponse.json(
+        { error: preAuth.error },
+        { status: preAuth.status }
+      );
+    }
+
     await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
@@ -23,6 +36,11 @@ export async function POST(
       );
     }
 
+    const authz = authorizeRestaurantStaff(req, restaurant.id, "menu");
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     const body = await req.json();
     if (!body.name || !body.category || body.price === undefined) {
       return NextResponse.json(
@@ -31,10 +49,18 @@ export async function POST(
       );
     }
 
+    const numericPrice = Number(body.price);
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      return NextResponse.json(
+        { error: "Item price must be a non-negative number" },
+        { status: 400 }
+      );
+    }
+
     const item = createMenuItem({
       ...body,
       restaurantId: restaurant.id,
-      price: Number(body.price),
+      price: numericPrice,
     });
 
     await commitToTurso();
@@ -48,16 +74,50 @@ export async function POST(
   }
 }
 
-export async function PATCH(req: NextRequest) {
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+) {
   try {
+    const preAuth = authorizeStaffSessionPrecheck(req);
+    if (!preAuth.ok) {
+      return NextResponse.json(
+        { error: preAuth.error },
+        { status: preAuth.status }
+      );
+    }
+
     await hydrateFromTursoIfNeeded();
+    const { slug } = await context.params;
+    const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
+    if (!restaurant) {
+      return NextResponse.json(
+        { error: "Restaurant not found" },
+        { status: 404 }
+      );
+    }
+
+    const authz = authorizeRestaurantStaff(req, restaurant.id, "menu");
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     const body = await req.json();
-    const { itemId, ...updates } = body;
+    const {
+      itemId,
+      id: _ignoredId,
+      restaurantId: _ignoredRestaurantId,
+      ...updates
+    } = body;
     if (!itemId) {
       return NextResponse.json(
         { error: "itemId is required" },
         { status: 400 }
       );
+    }
+
+    if (!listMenuItems(restaurant.id).some((m) => m.id === itemId)) {
+      return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
     }
 
     const updated = updateMenuItem(itemId, updates);
@@ -76,15 +136,44 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+) {
   try {
+    const preAuth = authorizeStaffSessionPrecheck(req);
+    if (!preAuth.ok) {
+      return NextResponse.json(
+        { error: preAuth.error },
+        { status: preAuth.status }
+      );
+    }
+
     await hydrateFromTursoIfNeeded();
+    const { slug } = await context.params;
+    const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
+    if (!restaurant) {
+      return NextResponse.json(
+        { error: "Restaurant not found" },
+        { status: 404 }
+      );
+    }
+
+    const authz = authorizeRestaurantStaff(req, restaurant.id, "menu");
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     const itemId = req.nextUrl.searchParams.get("itemId");
     if (!itemId) {
       return NextResponse.json(
         { error: "itemId query parameter is required" },
         { status: 400 }
       );
+    }
+
+    if (!listMenuItems(restaurant.id).some((m) => m.id === itemId)) {
+      return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
     }
 
     const deleted = deleteMenuItem(itemId);

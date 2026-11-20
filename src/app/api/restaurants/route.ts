@@ -9,10 +9,13 @@ import {
   listRestaurants,
 } from "@/lib/db";
 import { evaluateRestaurantAvailability } from "@/lib/availability";
+import { sanitizeRestaurantForPublicStorefront } from "@/lib/security";
+import { authorizePlatformAdmin } from "@/lib/session";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await hydrateFromTursoIfNeeded();
+    req.nextUrl.searchParams.get("view");
     const restaurants = listRestaurants();
     const enriched = restaurants.map((r) => {
       const orders = listOrders(r.id);
@@ -23,8 +26,9 @@ export async function GET() {
         .filter((o) => o.status !== "cancelled")
         .reduce((sum, o) => sum + o.total, 0);
 
+      const sanitized = sanitizeRestaurantForPublicStorefront(r);
       return {
-        ...r,
+        ...sanitized,
         stats: {
           totalOrders: orders.length,
           activeOrders: orders.filter(
@@ -51,6 +55,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authz = authorizePlatformAdmin(req);
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     await hydrateFromTursoIfNeeded();
     const body = await req.json();
     if (!body.name || !body.ownerName || !body.ownerEmail) {

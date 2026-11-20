@@ -7,6 +7,7 @@ import {
   hydrateFromTursoIfNeeded,
   listMenuItems,
   listOrders,
+  syncPlatformSettingFromTurso,
   updateOrderIntegrationFields,
   updateRestaurantTenant,
 } from "@/lib/db";
@@ -30,6 +31,10 @@ import {
   searchSquareCatalogObjects,
   syncCloverInventoryAndModifiers,
 } from "@/lib/squareCloverPosClient";
+import {
+  authorizeRestaurantStaff,
+  authorizeStaffSessionPrecheck,
+} from "@/lib/session";
 import { IntegrationActivityLog, OrderDeliveryTracking } from "@/lib/types";
 
 export async function POST(
@@ -37,7 +42,16 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const preAuth = authorizeStaffSessionPrecheck(req);
+    if (!preAuth.ok) {
+      return NextResponse.json(
+        { error: preAuth.error },
+        { status: preAuth.status }
+      );
+    }
+
     await hydrateFromTursoIfNeeded();
+    await syncPlatformSettingFromTurso("platform_integrations");
     const { slug } = await context.params;
     const decodedSlug = decodeURIComponent(slug);
     const restaurant = getRestaurantBySlugOrDomain(decodedSlug);
@@ -49,8 +63,47 @@ export async function POST(
       );
     }
 
+    const baseAuthz = authorizeRestaurantStaff(req, restaurant.id);
+    if (!baseAuthz.ok) {
+      return NextResponse.json(
+        { error: baseAuthz.error },
+        { status: baseAuthz.status }
+      );
+    }
+
     const body = await req.json();
     const action = String(body.action || "");
+
+    const isOrderDeliveryAction =
+      action === "dispatch_doordash" ||
+      action === "sync_doordash_delivery" ||
+      action === "advance_doordash_status";
+
+    const integrationsAuthz = authorizeRestaurantStaff(
+      req,
+      restaurant.id,
+      "integrations"
+    );
+    if (!integrationsAuthz.ok) {
+      if (isOrderDeliveryAction) {
+        const ordersAuthz = authorizeRestaurantStaff(
+          req,
+          restaurant.id,
+          "orders"
+        );
+        if (!ordersAuthz.ok) {
+          return NextResponse.json(
+            { error: integrationsAuthz.error },
+            { status: integrationsAuthz.status }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: integrationsAuthz.error },
+          { status: integrationsAuthz.status }
+        );
+      }
+    }
     const now = new Date().toISOString();
 
     const currentConfig =
@@ -110,6 +163,7 @@ export async function POST(
       const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
         integrationsConfig: currentConfig,
       });
+      await commitToTurso();
       return NextResponse.json({
         ok: true,
         credentialSource: creds.source,
@@ -182,6 +236,7 @@ export async function POST(
       const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
         integrationsConfig: currentConfig,
       });
+      await commitToTurso();
 
       return NextResponse.json({
         ok: true,
@@ -251,6 +306,7 @@ export async function POST(
       const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
         integrationsConfig: currentConfig,
       });
+      await commitToTurso();
 
       return NextResponse.json({
         ok: apiRes.ok,
@@ -323,6 +379,7 @@ export async function POST(
       const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
         integrationsConfig: currentConfig,
       });
+      await commitToTurso();
 
       return NextResponse.json({
         ok: true,
@@ -700,29 +757,35 @@ export async function POST(
         },
       });
 
-      currentConfig.vapi.totalVoiceCallsHandled =
-        (currentConfig.vapi.totalVoiceCallsHandled || 0) + 1;
-      currentConfig.vapi.totalVoiceOrdersCreated =
-        (currentConfig.vapi.totalVoiceOrdersCreated || 0) + 1;
-
-      prependLog({
-        id: `intlog_${Date.now()}`,
-        integration: "vapi",
-        action: "Inbound Phone Order Created",
-        status: "success",
-        summary: `📞 Vapi AI Phone Order #${
-          createdOrder.orderNumber
-        } created for ${callerName} ($${createdOrder.total.toFixed(
-          2
-        )}) • Added ${firstDish.name} + ${
-          secondDish.name
-        } & texted SMS checkout receipt.`,
-        createdAt: now,
-      });
+      const latestAfterOrder =
+        getRestaurantBySlugOrDomain(restaurant.id) || restaurant;
+      const latestConfig = latestAfterOrder.integrationsConfig || currentConfig;
+      latestConfig.vapi.totalVoiceCallsHandled =
+        (latestConfig.vapi.totalVoiceCallsHandled || 0) + 1;
+      latestConfig.vapi.totalVoiceOrdersCreated =
+        (latestConfig.vapi.totalVoiceOrdersCreated || 0) + 1;
+      latestConfig.activityLogs = [
+        {
+          id: `intlog_${Date.now()}`,
+          integration: "vapi" as const,
+          action: "Inbound Phone Order Created",
+          status: "success" as const,
+          summary: `📞 Vapi AI Phone Order #${
+            createdOrder.orderNumber
+          } created for ${callerName} ($${createdOrder.total.toFixed(
+            2
+          )}) • Added ${firstDish.name} + ${
+            secondDish.name
+          } & texted SMS checkout receipt.`,
+          createdAt: now,
+        },
+        ...(latestConfig.activityLogs || []),
+      ].slice(0, 30);
 
       const updatedRestaurant = updateRestaurantTenant(restaurant.id, {
-        integrationsConfig: currentConfig,
+        integrationsConfig: latestConfig,
       });
+      await commitToTurso();
 
       return NextResponse.json({
         ok: true,
@@ -733,7 +796,7 @@ export async function POST(
           cuisine: restaurant.cuisine,
           address: restaurant.address,
           phone: restaurant.phone,
-          vapiConfig: currentConfig.vapi,
+          vapiConfig: latestConfig.vapi,
           menuItems,
         }),
         integrationsConfig: updatedRestaurant?.integrationsConfig,

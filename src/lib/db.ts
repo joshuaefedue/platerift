@@ -33,6 +33,7 @@ import {
   buildSimulatedDoorDashTracking,
 } from "./integrationsDefaults";
 import {
+  assertValidTombstoneTable,
   ensureTursoHydrated,
   flushTursoMirror,
   getTursoCloudStatus,
@@ -340,6 +341,13 @@ function initTables(db: DatabaseSync) {
     CREATE TABLE IF NOT EXISTS platform_settings (
       key TEXT PRIMARY KEY,
       valueJson TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS deleted_records (
+      tableName TEXT NOT NULL,
+      recordId TEXT NOT NULL,
+      deletedAt TEXT NOT NULL,
+      PRIMARY KEY (tableName, recordId)
     );
   `);
 
@@ -2823,9 +2831,23 @@ export function updateMenuItem(
   return merged;
 }
 
+function recordDeletedTombstone(
+  db: DatabaseSync,
+  tableName: string,
+  recordId: string
+): void {
+  const safeTable = assertValidTombstoneTable(tableName);
+  db.prepare(
+    "INSERT OR REPLACE INTO deleted_records (tableName, recordId, deletedAt) VALUES (?, ?, ?)"
+  ).run(safeTable, recordId, new Date().toISOString());
+}
+
 export function deleteMenuItem(itemId: string): boolean {
   const db = getDb();
   const res = db.prepare("DELETE FROM menu_items WHERE id = ?").run(itemId);
+  if (res.changes > 0) {
+    recordDeletedTombstone(db, "menu_items", itemId);
+  }
   scheduleTursoMirror(db);
   return res.changes > 0;
 }
@@ -4160,6 +4182,9 @@ export function updateUserAccount(
 export function deleteUserAccount(userId: string): boolean {
   const db = getDb();
   const res = db.prepare("DELETE FROM users WHERE id = ?").run(userId);
+  if (res.changes > 0) {
+    recordDeletedTombstone(db, "users", userId);
+  }
   scheduleTursoMirror(db);
   return res.changes > 0;
 }

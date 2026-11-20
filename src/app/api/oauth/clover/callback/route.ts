@@ -5,6 +5,7 @@ import {
   getRestaurantBySlugOrDomain,
   hydrateFromTursoIfNeeded,
   listRestaurants,
+  syncPlatformSettingFromTurso,
   updateRestaurantTenant,
 } from "@/lib/db";
 import { buildDefaultIntegrationsConfig } from "@/lib/integrationsDefaults";
@@ -17,6 +18,7 @@ import {
 export async function GET(req: NextRequest) {
   try {
     await hydrateFromTursoIfNeeded();
+    await syncPlatformSettingFromTurso("platform_integrations");
     const code = req.nextUrl.searchParams.get("code") || "";
     const merchantId = req.nextUrl.searchParams.get("merchant_id") || "";
     const rawState = req.nextUrl.searchParams.get("state") || "bella-napoli";
@@ -112,7 +114,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.redirect(
       new URL(
-        `/dashboard/${encodeURIComponent(restaurant.slug)}?tab=integrations&oauth=clover_connected`,
+        `/dashboard/${encodeURIComponent(restaurant.customDomain || restaurant.slug)}?tab=integrations&oauth=clover_connected`,
         req.url
       )
     );

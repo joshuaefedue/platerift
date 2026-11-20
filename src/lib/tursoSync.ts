@@ -12,6 +12,41 @@ const TABLES = [
   "platform_settings",
 ] as const;
 
+export const TOMBSTONE_ALLOWED_TABLES = [
+  "menu_items",
+  "users",
+  "restaurants",
+  "scheduled_reorders",
+] as const;
+
+export type TombstoneAllowedTable = (typeof TOMBSTONE_ALLOWED_TABLES)[number];
+
+const TOMBSTONE_ALLOWED_TABLE_SET = new Set<string>(TOMBSTONE_ALLOWED_TABLES);
+
+export function isValidTombstoneTable(
+  tableName: string
+): tableName is TombstoneAllowedTable {
+  return TOMBSTONE_ALLOWED_TABLE_SET.has(tableName);
+}
+
+export function assertValidTombstoneTable(
+  tableName: string
+): TombstoneAllowedTable {
+  if (!isValidTombstoneTable(tableName)) {
+    throw new Error(`Invalid tombstone table name: ${tableName}`);
+  }
+  return tableName;
+}
+
+const LOCAL_DELETED_RECORDS_DDL = `
+  CREATE TABLE IF NOT EXISTS deleted_records (
+    tableName TEXT NOT NULL,
+    recordId TEXT NOT NULL,
+    deletedAt TEXT NOT NULL,
+    PRIMARY KEY (tableName, recordId)
+  );
+`;
+
 export interface TursoConfig {
   httpUrl: string;
   rawUrl: string;
@@ -416,6 +451,12 @@ export const TURSO_SCHEMA_STATEMENTS: string[] = [
     key TEXT PRIMARY KEY,
     valueJson TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS deleted_records (
+    tableName TEXT NOT NULL,
+    recordId TEXT NOT NULL,
+    deletedAt TEXT NOT NULL,
+    PRIMARY KEY (tableName, recordId)
+  )`,
 ];
 
 export interface TursoSyncSummary {
@@ -425,6 +466,76 @@ export interface TursoSyncSummary {
   tableCounts: Record<string, number>;
   syncedAt: string;
   error?: string;
+}
+
+interface TombstoneRecord {
+  tableName: TombstoneAllowedTable;
+  recordId: string;
+  deletedAt: string;
+}
+
+/**
+ * Merges remote Turso tombstones with local tombstones in SQLite,
+ * deletes any locally present tombstoned records, and returns the unified
+ * tombstone list and `${tableName}:${recordId}` lookup set.
+ */
+function mergeAndApplyTombstonesLocally(
+  db: DatabaseSync,
+  remoteRows: Record<string, unknown>[],
+  fallbackTimestamp: string
+): {
+  tombstones: TombstoneRecord[];
+  tombstoneSet: Set<string>;
+} {
+  db.exec(LOCAL_DELETED_RECORDS_DDL);
+
+  const existingLocalRows = db
+    .prepare("SELECT tableName, recordId, deletedAt FROM deleted_records")
+    .all() as { tableName: string; recordId: string; deletedAt: string }[];
+
+  const byKey = new Map<string, TombstoneRecord>();
+  for (const row of existingLocalRows) {
+    const tableName = String(row.tableName || "");
+    const recordId = String(row.recordId || "");
+    const deletedAt = String(row.deletedAt || fallbackTimestamp);
+    if (!isValidTombstoneTable(tableName) || !recordId) continue;
+    byKey.set(`${tableName}:${recordId}`, { tableName, recordId, deletedAt });
+  }
+
+  const upsertStmt = db.prepare(
+    "INSERT OR REPLACE INTO deleted_records (tableName, recordId, deletedAt) VALUES (?, ?, ?)"
+  );
+
+  for (const row of remoteRows) {
+    const tableName = String(row.tableName || "");
+    const recordId = String(row.recordId || "");
+    const deletedAt = String(row.deletedAt || fallbackTimestamp);
+    if (!isValidTombstoneTable(tableName) || !recordId) continue;
+
+    const key = `${tableName}:${recordId}`;
+    const existing = byKey.get(key);
+    if (!existing || deletedAt > existing.deletedAt) {
+      upsertStmt.run(tableName, recordId, deletedAt);
+      byKey.set(key, { tableName, recordId, deletedAt });
+    }
+  }
+
+  const tombstones = Array.from(byKey.values());
+  const tombstoneSet = new Set<string>(byKey.keys());
+
+  if (tombstones.length > 0) {
+    db.exec("PRAGMA foreign_keys = OFF;");
+    try {
+      for (const { tableName, recordId } of tombstones) {
+        const safeTable = assertValidTombstoneTable(tableName);
+        db.prepare(`DELETE FROM ${safeTable} WHERE id = ?`).run(recordId);
+      }
+    } finally {
+      db.exec("PRAGMA foreign_keys = ON;");
+    }
+  }
+
+  return { tombstones, tombstoneSet };
 }
 
 /**
@@ -447,10 +558,11 @@ export async function pushLocalSqliteToTurso(
     };
   }
 
-  // 1. Ensure all tables exist on Turso and inspect existing platform_settings in Turso
+  // 1. Ensure all tables exist on Turso and inspect existing platform_settings and tombstones in Turso
   const initResults = await executeTursoPipeline(config, [
     ...TURSO_SCHEMA_STATEMENTS.map((sql) => ({ sql })),
     { sql: "SELECT key, valueJson FROM platform_settings" },
+    { sql: "SELECT tableName, recordId, deletedAt FROM deleted_records" },
   ]);
   const tursoSettingsRows =
     initResults[TURSO_SCHEMA_STATEMENTS.length]?.rows || [];
@@ -460,6 +572,12 @@ export async function pushLocalSqliteToTurso(
       tursoSettingsMap.set(String(r.key), String(r.valueJson));
     }
   }
+
+  // Merge any remote tombstones into local SQLite so a stale instance never resurrects deleted rows
+  const tursoTombstoneRows =
+    initResults[TURSO_SCHEMA_STATEMENTS.length + 1]?.rows || [];
+  const { tombstones: localTombstones, tombstoneSet } =
+    mergeAndApplyTombstonesLocally(db, tursoTombstoneRows, syncedAt);
 
   // 2. Build batched INSERT OR REPLACE statements for all 9 tables
   const statements: { sql: string; args: unknown[] }[] = [];
@@ -479,6 +597,15 @@ export async function pushLocalSqliteToTurso(
     const sql = `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${placeholders})`;
 
     for (const row of rows) {
+      if (
+        isValidTombstoneTable(table) &&
+        row.id !== undefined &&
+        row.id !== null &&
+        tombstoneSet.has(`${table}:${String(row.id)}`)
+      ) {
+        continue;
+      }
+
       // Never overwrite a newer Turso platform_settings record with an older local or default seed snapshot
       if (table === "platform_settings") {
         const k = String(row.key || "");
@@ -507,6 +634,20 @@ export async function pushLocalSqliteToTurso(
       });
     }
   }
+
+  // 3. Push deletion tombstones and emit DELETE FROM <tableName> WHERE id = ? statements to Turso
+  for (const tombstone of localTombstones) {
+    const safeTable = assertValidTombstoneTable(tombstone.tableName);
+    statements.push({
+      sql: "INSERT OR REPLACE INTO deleted_records (tableName, recordId, deletedAt) VALUES (?, ?, ?)",
+      args: [safeTable, tombstone.recordId, tombstone.deletedAt],
+    });
+    statements.push({
+      sql: `DELETE FROM ${safeTable} WHERE id = ?`,
+      args: [tombstone.recordId],
+    });
+  }
+  tableCounts.deleted_records = localTombstones.length;
 
   // Execute in chunks of 60 statements per HTTP pipeline call
   const CHUNK_SIZE = 60;
@@ -545,11 +686,16 @@ export async function pullTursoToLocalSqlite(
     };
   }
 
-  // 1. Ensure schema exists on Turso
-  await executeTursoPipeline(
-    config,
-    TURSO_SCHEMA_STATEMENTS.map((sql) => ({ sql }))
-  );
+  // 1. Ensure schema exists on Turso and pull deleted_records FIRST
+  const initResults = await executeTursoPipeline(config, [
+    ...TURSO_SCHEMA_STATEMENTS.map((sql) => ({ sql })),
+    { sql: "SELECT tableName, recordId, deletedAt FROM deleted_records" },
+  ]);
+  const tursoTombstoneRows =
+    initResults[TURSO_SCHEMA_STATEMENTS.length]?.rows || [];
+
+  const { tombstones: tombstonesToApply, tombstoneSet } =
+    mergeAndApplyTombstonesLocally(db, tursoTombstoneRows, syncedAt);
 
   // 2. Fetch all tables from Turso in one pipeline round-trip
   const selectResults = await executeTursoPipeline(
@@ -558,12 +704,14 @@ export async function pullTursoToLocalSqlite(
   );
 
   const tursoRestaurantCount = selectResults[0]?.rows?.length || 0;
-  if (tursoRestaurantCount === 0) {
+  if (tursoRestaurantCount === 0 && tursoTombstoneRows.length === 0) {
     // Turso is newly created and empty -> push our seeded local database to Turso!
     return pushLocalSqliteToTurso(db);
   }
 
-  const tableCounts: Record<string, number> = {};
+  const tableCounts: Record<string, number> = {
+    deleted_records: tombstoneSet.size,
+  };
   db.exec("PRAGMA foreign_keys = OFF;");
   try {
     for (let idx = 0; idx < TABLES.length; idx++) {
@@ -574,6 +722,15 @@ export async function pullTursoToLocalSqlite(
       if (rows.length === 0) continue;
 
       for (const row of rows) {
+        if (
+          isValidTombstoneTable(table) &&
+          row.id !== undefined &&
+          row.id !== null &&
+          tombstoneSet.has(`${table}:${String(row.id)}`)
+        ) {
+          continue;
+        }
+
         if (table === "platform_settings") {
           const k = String(row.key || "");
           const tursoVal = String(row.valueJson || "");
@@ -602,6 +759,12 @@ export async function pullTursoToLocalSqlite(
         );
         stmt.run(...(cols.map((c) => row[c]) as (string | number | null)[]));
       }
+    }
+
+    // Ensure any tombstoned records (including locally seeded defaults) are deleted locally
+    for (const { tableName, recordId } of tombstonesToApply) {
+      const safeTable = assertValidTombstoneTable(tableName);
+      db.prepare(`DELETE FROM ${safeTable} WHERE id = ?`).run(recordId);
     }
   } finally {
     db.exec("PRAGMA foreign_keys = ON;");

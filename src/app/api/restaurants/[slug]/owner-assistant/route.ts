@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   commitToTurso,
-  createCustomerManual,
-  createEmailCampaign,
-  createMenuItem,
-  createSmsLog,
-  createUserAccount,
-  deleteMenuItem,
-  deleteUserAccount,
+  createCustomerManual as dbCreateCustomerManual,
+  createEmailCampaign as dbCreateEmailCampaign,
+  createMenuItem as dbCreateMenuItem,
+  createSmsLog as dbCreateSmsLog,
+  createUserAccount as dbCreateUserAccount,
+  deleteMenuItem as dbDeleteMenuItem,
+  deleteUserAccount as dbDeleteUserAccount,
   getPlatformIntegrationsConfig,
   getRestaurantBySlugOrDomain,
   hydrateFromTursoIfNeeded,
@@ -17,11 +17,11 @@ import {
   listOrders,
   listSmsLogs,
   listUsers,
-  updateMenuItem,
-  updateOrderIntegrationFields,
-  updateOrderStatus,
-  updateRestaurantTenant,
-  updateUserAccount,
+  updateMenuItem as dbUpdateMenuItem,
+  updateOrderIntegrationFields as dbUpdateOrderIntegrationFields,
+  updateOrderStatus as dbUpdateOrderStatus,
+  updateRestaurantTenant as dbUpdateRestaurantTenant,
+  updateUserAccount as dbUpdateUserAccount,
 } from "@/lib/db";
 import { evaluateRestaurantAvailability } from "@/lib/availability";
 import {
@@ -29,6 +29,10 @@ import {
   resolveDoorDashCredentials,
 } from "@/lib/doordashDriveClient";
 import { buildDefaultVariantAndSideGroups } from "@/lib/menuVariantsAndSides";
+import {
+  authorizeRestaurantStaff,
+  authorizeStaffSessionPrecheck,
+} from "@/lib/session";
 import {
   InventoryItem,
   LayoutStyle,
@@ -163,6 +167,14 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const preAuth = authorizeStaffSessionPrecheck(req);
+    if (!preAuth.ok) {
+      return NextResponse.json(
+        { error: preAuth.error },
+        { status: preAuth.status }
+      );
+    }
+
     await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const decodedSlug = decodeURIComponent(slug);
@@ -174,6 +186,45 @@ export async function POST(
       );
     }
 
+    const authz = authorizeRestaurantStaff(req, restaurant.id);
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
+    let mutated = false;
+    const trackMutation = <Args extends unknown[], R>(
+      fn: (...args: Args) => R
+    ): ((...args: Args) => R) => {
+      return (...args: Args): R => {
+        mutated = true;
+        return fn(...args);
+      };
+    };
+
+    const createCustomerManual = trackMutation(dbCreateCustomerManual);
+    const createEmailCampaign = trackMutation(dbCreateEmailCampaign);
+    const createMenuItem = trackMutation(dbCreateMenuItem);
+    const createSmsLog = trackMutation(dbCreateSmsLog);
+    const createUserAccount = trackMutation(dbCreateUserAccount);
+    const deleteMenuItem = trackMutation(dbDeleteMenuItem);
+    const deleteUserAccount = trackMutation(dbDeleteUserAccount);
+    const updateMenuItem = trackMutation(dbUpdateMenuItem);
+    const updateOrderIntegrationFields = trackMutation(
+      dbUpdateOrderIntegrationFields
+    );
+    const updateOrderStatus = trackMutation(dbUpdateOrderStatus);
+    const updateRestaurantTenant = trackMutation(dbUpdateRestaurantTenant);
+    const updateUserAccount = trackMutation(dbUpdateUserAccount);
+
+    interface OwnerAssistantPayload {
+      replyText: string;
+      executedTasks: string[];
+      uiActions: OwnerUiAction[];
+      quickReplies: string[];
+      state: OwnerAssistantState;
+    }
+
+    const runAssistant = async (): Promise<OwnerAssistantPayload> => {
     const body = await req.json();
     const message: string = String(body.message || "").trim();
     const lower = message.toLowerCase();
@@ -297,13 +348,13 @@ export async function POST(
           `Change price of ${created.name} to $19.99`,
           "Add another dish",
         ];
-        return NextResponse.json({
+        return {
           replyText,
           executedTasks,
           uiActions,
           quickReplies,
           state: nextState,
-        });
+        };
       }
     }
 
@@ -325,13 +376,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `⏸️ **Online Ordering is now PAUSED** for **${restaurant.name}**. Customers visiting your storefront will see your pause notice until you resume.`;
       quickReplies = ["Resume online ordering", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (
@@ -348,13 +399,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `✅ **Online Ordering is now LIVE** for **${restaurant.name}**! Customers can place orders immediately.`;
       quickReplies = ["Check active orders", "Pause online ordering"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -386,13 +437,13 @@ export async function POST(
         "Complete all ready orders",
         "Check active orders",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (
@@ -416,13 +467,13 @@ export async function POST(
           .join(", ")}.`;
       }
       quickReplies = ["Complete all ready orders", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (
@@ -450,13 +501,13 @@ export async function POST(
           .join(", ")}) as **COMPLETED**!`;
       }
       quickReplies = ["Check active orders", "Show today's orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Single specific order status update (by #number, "latest order", or "it")
@@ -501,13 +552,13 @@ export async function POST(
           : []),
         "Check active orders",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Specific Order Details Lookup (when user asks about a specific order # or "latest order")
@@ -531,13 +582,13 @@ export async function POST(
         `Complete order #${targetOrder.orderNumber}`,
         `Cancel order #${targetOrder.orderNumber}`,
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Filter Orders by Date or Status
@@ -574,13 +625,13 @@ export async function POST(
         "Start preparing all confirmed orders",
         "Mark all preparing orders ready",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Check / Show Active Orders or Filter by Status ("check active orders", "showall active orders", "how many orders", "pending orders")
@@ -654,13 +705,13 @@ export async function POST(
           ? [`Mark order #${listToShow[0].orderNumber} ready`]
           : []),
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -690,13 +741,13 @@ export async function POST(
           .join(", ")}) back to **AVAILABLE** on your storefront and synced with POS!`;
       }
       quickReplies = ["Show menu overview", "Open Add Menu modal"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Delete / Remove a dish from menu
@@ -713,13 +764,13 @@ export async function POST(
         uiActions.push({ type: "refresh_portal" });
         replyText = `🗑️ Removed **${dish.name}** from **${restaurant.name}**'s menu.`;
         quickReplies = ["Show menu overview", "Open Add Menu modal"];
-        return NextResponse.json({
+        return {
           replyText,
           executedTasks,
           uiActions,
           quickReplies,
           state: nextState,
-        });
+        };
       }
     }
 
@@ -748,13 +799,13 @@ export async function POST(
           "Make all dishes available",
           "Show sold-out dishes",
         ];
-        return NextResponse.json({
+        return {
           replyText,
           executedTasks,
           uiActions,
           quickReplies,
           state: nextState,
-        });
+        };
       }
     }
 
@@ -783,13 +834,13 @@ export async function POST(
           `Mark ${dish.name} sold out`,
           "Show menu overview",
         ];
-        return NextResponse.json({
+        return {
           replyText,
           executedTasks,
           uiActions,
           quickReplies,
           state: nextState,
-        });
+        };
       }
     }
 
@@ -824,13 +875,13 @@ export async function POST(
           `Mark ${dishForUpdate.name} sold out`,
           "Show menu overview",
         ];
-        return NextResponse.json({
+        return {
           replyText,
           executedTasks,
           uiActions,
           quickReplies,
           state: nextState,
-        });
+        };
       }
     }
 
@@ -853,13 +904,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `📊 Updated **${dishForUpdate.name}** daily stock count to **${count} portions**!`;
       quickReplies = [`Edit ${dishForUpdate.name}`, "Show menu overview"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Create / Add a New Dish (flexible phrasings: "add new dish X for $18", "add Jollof Rice $18.50", "add Suya Skewers to menu")
@@ -910,13 +961,13 @@ export async function POST(
           `Mark ${created.name} sold out`,
           "Open Add Menu modal",
         ];
-        return NextResponse.json({
+        return {
           replyText,
           executedTasks,
           uiActions,
           quickReplies,
           state: nextState,
-        });
+        };
       }
     }
 
@@ -936,13 +987,13 @@ export async function POST(
         "Grilled Prawns & Plantain $22.00",
         "Show menu overview",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Edit a Dish Modal
@@ -963,13 +1014,13 @@ export async function POST(
           ? `Mark ${dishForUpdate.name} sold out`
           : `Make ${dishForUpdate.name} available`,
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Show Sold-Out Dishes
@@ -987,13 +1038,13 @@ export async function POST(
         "Show menu overview",
         "Open Add Menu modal",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Show Menu Overview / List Dishes
@@ -1024,13 +1075,13 @@ export async function POST(
           ? ["Make all dishes available"]
           : [`Mark ${menuItems[0]?.name || "first dish"} sold out`]),
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -1074,13 +1125,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `📦 Updated **${matchedIng.name}** stock from **${matchedIng.currentStock} ${matchedIng.unit}** to **${nextStock} ${matchedIng.unit}**!`;
       quickReplies = ["Check inventory & profit", "Restock all low stock items"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (
@@ -1118,13 +1169,13 @@ export async function POST(
           .join(", ")}) back to full par levels!`;
       }
       quickReplies = ["Check inventory & profit", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (
@@ -1155,13 +1206,13 @@ export async function POST(
         ...(inventoryItems[0] ? [`Restock ${inventoryItems[0].name}`] : []),
         "Show menu overview",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -1178,13 +1229,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `⏱️ Updated **${restaurant.name}**'s estimated prep time to **${mins} minutes**!`;
       quickReplies = ["Set max orders per hour to 25", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     const maxHourMatch = message.match(
@@ -1198,13 +1249,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `🚦 Updated **Max Orders Per Hour** to **${cap} orders/hr**!`;
       quickReplies = ["Set prep time to 20 minutes", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     const minOrderMatch = message.match(
@@ -1218,13 +1269,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `💵 Updated **Minimum Order Amount** to **$${minAmt.toFixed(2)}**!`;
       quickReplies = ["Set delivery fee to $4.99", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Open / Close specific day of week ("close on Sunday", "open on Monday")
@@ -1259,13 +1310,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `🗓️ **${desc}** on your weekly schedule!`;
       quickReplies = ["What are our hours?", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (/\b(what are our hours|show hours|opening hours|weekly schedule)\b/i.test(lower)) {
@@ -1284,13 +1335,13 @@ export async function POST(
         "Close on Sunday",
         "Open on Sunday",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Fulfillment & Feature toggles
@@ -1334,13 +1385,13 @@ export async function POST(
         isEnable ? "ENABLED" : "DISABLED"
       }** for **${restaurant.name}**.`;
       quickReplies = ["What are our hours?", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -1365,13 +1416,13 @@ export async function POST(
         "Set free delivery minimum to $45",
         "Check active orders",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     const freeDelivMatch = message.match(
@@ -1394,13 +1445,13 @@ export async function POST(
         2
       )}**!`;
       quickReplies = ["Set delivery fee to $4.99", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     const taxRateMatch = message.match(
@@ -1419,13 +1470,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `🧾 Updated **Sales Tax Rate** to **${rate}%**!`;
       quickReplies = ["Set delivery fee to $4.99", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (/\b(payment|stripe|paypal|receive money|tax rate)\b/i.test(lower)) {
@@ -1440,13 +1491,13 @@ export async function POST(
         "Set free delivery minimum to $40",
         "Set tax rate to 8.5%",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -1477,13 +1528,13 @@ export async function POST(
         "Show SMS logs",
         "Send 20% off weekend promo email",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (/\b(sms log|recent sms|text alerts)\b/i.test(lower)) {
@@ -1497,13 +1548,13 @@ export async function POST(
         "Send SMS broadcast: Flash special tonight 15% off!",
         "Check active orders",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (
@@ -1534,13 +1585,13 @@ export async function POST(
         "Show email campaigns",
         "Send SMS broadcast: Flash sale tonight 15% off!",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (/\b(show email campaigns|list email|campaigns)\b/i.test(lower)) {
@@ -1557,13 +1608,13 @@ export async function POST(
           : "No email campaigns sent yet."
       }`;
       quickReplies = ["Send 20% off weekend promo email", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -1589,13 +1640,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `👤 Added VIP Customer **${created.name}** (${created.email}) to your Customer CRM with +50 loyalty points!`;
       quickReplies = ["Show VIP customers", "Send SMS broadcast"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (/\b(vip|customer|customers|crm|top customer)\b/i.test(lower)) {
@@ -1617,13 +1668,13 @@ export async function POST(
         "Add VIP customer Amaka Okafor amaka@example.com",
         "Send SMS broadcast",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     const addStaffMatch = message.match(
@@ -1654,13 +1705,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `🛡️ Added **${created.name}** (${created.email}) as **${ROLE_DEFINITIONS[role].label}** (PIN: \`5588\`)!`;
       quickReplies = ["List staff", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (/\b(suspend|activate|remove|delete)\s+staff\b/i.test(lower)) {
@@ -1689,13 +1740,13 @@ export async function POST(
         uiActions.push({ type: "switch_tab", tab: "team" });
         uiActions.push({ type: "refresh_portal" });
         quickReplies = ["List staff", "Check active orders"];
-        return NextResponse.json({
+        return {
           replyText,
           executedTasks,
           uiActions,
           quickReplies,
           state: nextState,
-        });
+        };
       }
     }
 
@@ -1712,13 +1763,13 @@ export async function POST(
         "Add staff Tunde Bakare tunde@platerift.com",
         "Check active orders",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -1742,13 +1793,13 @@ export async function POST(
         "Change layout to modern-grid",
         "Open Website & Logo settings",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (
@@ -1769,13 +1820,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `✨ Updated your storefront layout style to **${nextLayout}**!`;
       quickReplies = ["Open Website & Logo settings", "Show menu overview"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     const taglineMatch = message.match(
@@ -1789,13 +1840,13 @@ export async function POST(
       uiActions.push({ type: "refresh_portal" });
       replyText = `✨ Updated **${restaurant.name}**'s tagline to: *"${nextTagline}"*!`;
       quickReplies = ["Open Website & Logo settings", "Check active orders"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (/\b(website|logo|domain|about us)\b/i.test(lower)) {
@@ -1811,13 +1862,13 @@ export async function POST(
         "Change layout to modern-grid",
         "Check active orders",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -1870,13 +1921,13 @@ export async function POST(
         `- **Quoted Fee**: **$${dispatchRes.tracking.feeTotal.toFixed(2)}** (Customer paid $${dispatchRes.tracking.customerFeeCharged.toFixed(2)}, Kitchen subsidy $${dispatchRes.tracking.restaurantSubsidy.toFixed(2)})\n` +
         `- **API Status**: ${dispatchRes.apiMessage}`;
       quickReplies = ["Check active orders", "Sync menu with Square and Clover"];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (
@@ -1918,13 +1969,13 @@ export async function POST(
             "Sync menu with Square and Clover",
             "Check active orders",
           ];
-          return NextResponse.json({
+          return {
             replyText,
             executedTasks,
             uiActions,
             quickReplies,
             state: nextState,
-          });
+          };
         }
       }
 
@@ -2002,13 +2053,13 @@ export async function POST(
         "Sync menu with Square and Clover",
         "Check active orders",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -2034,13 +2085,13 @@ export async function POST(
         `Change price of ${dishForUpdate.name} to $${(dishForUpdate.price + 2).toFixed(2)}`,
         `Delete ${dishForUpdate.name}`,
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     if (matchedIng) {
@@ -2055,13 +2106,13 @@ export async function POST(
         `Add 20 to ${matchedIng.name}`,
         "Restock all low stock items",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // =========================================================================
@@ -2092,13 +2143,13 @@ export async function POST(
         "Check inventory & profit",
         "Restock all low stock items",
       ];
-      return NextResponse.json({
+      return {
         replyText,
         executedTasks,
         uiActions,
         quickReplies,
         state: nextState,
-      });
+      };
     }
 
     // Specific, non-generic response when the owner types an unfamiliar phrase
@@ -2115,13 +2166,20 @@ export async function POST(
       "Show menu overview",
     ];
 
-    return NextResponse.json({
+    return {
       replyText,
       executedTasks,
       uiActions,
       quickReplies,
       state: nextState,
-    });
+    };
+    };
+
+    const responsePayload = await runAssistant();
+    if (mutated) {
+      await commitToTurso();
+    }
+    return NextResponse.json(responsePayload);
   } catch (err) {
     console.error("Owner AI Assistant error:", err);
     return NextResponse.json(

@@ -10,6 +10,7 @@ import {
   Globe,
   LayoutDashboard,
   Lock,
+  LogOut,
   Mail,
   Menu,
   MessageSquare,
@@ -52,6 +53,16 @@ interface EnrichedRestaurant extends RestaurantTenant {
     customerCount: number;
   };
   availability: OrderingAvailabilityCheck;
+}
+
+interface ActivePlatformSession {
+  sub: string;
+  actor: "staff" | "customer";
+  scope: "platform" | "restaurant" | "customer";
+  role: string;
+  email: string;
+  name: string;
+  restaurantId: string | null;
 }
 
 const DEFAULT_FEATURES: TenantFeatureFlags = {
@@ -110,6 +121,18 @@ export default function SuperAdminDashboard() {
     useState<EnrichedRestaurant | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Platform Admin HTTP-Only Session Auth State
+  const [platformSession, setPlatformSession] =
+    useState<ActivePlatformSession | null>(null);
+  const [strictAuthEnforced, setStrictAuthEnforced] = useState(false);
+  const [authRequiredPrompt, setAuthRequiredPrompt] = useState<string | null>(
+    null
+  );
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
+  const [adminLoginInput, setAdminLoginInput] = useState("");
+  const [adminLoginError, setAdminLoginError] = useState<string | null>(null);
+  const [adminLoginBusy, setAdminLoginBusy] = useState(false);
+
   // Super Admin Create User State
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -157,28 +180,131 @@ export default function SuperAdminDashboard() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  const handleAuthFailure = (
+    status: number,
+    data?: { error?: string }
+  ): boolean => {
+    if (status === 401 || status === 403) {
+      const msg =
+        data?.error ||
+        "Platform administrator sign-in required to perform this action.";
+      setAuthRequiredPrompt(msg);
+      setAdminLoginError(msg);
+      setShowAdminLoginModal(true);
+      showToastMessage(`🔐 ${msg}`);
+      return true;
+    }
+    return false;
+  };
+
+  const handleAdminSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminLoginInput.trim()) return;
+    setAdminLoginBusy(true);
+    setAdminLoginError(null);
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actor: "staff",
+          scope: "platform",
+          emailOrPin: adminLoginInput.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.user) {
+        setAdminLoginError(
+          data.error || "Invalid platform admin email or 4-digit PIN."
+        );
+        return;
+      }
+      setAdminLoginInput("");
+      setAuthRequiredPrompt(null);
+      setShowAdminLoginModal(false);
+      await fetchRestaurants();
+      showToastMessage(
+        `🔐 Signed in as ${data.user.name} (${data.user.title || data.user.role})`
+      );
+    } catch {
+      setAdminLoginError("Network error while signing in.");
+    } finally {
+      setAdminLoginBusy(false);
+    }
+  };
+
+  const handleAdminSignOut = async () => {
+    try {
+      await fetch("/api/auth", { method: "DELETE" });
+      setPlatformSession(null);
+      showToastMessage("Signed out of Platform Admin session.");
+      await fetchRestaurants();
+    } catch {
+      showToastMessage("⚠️ Could not sign out cleanly.");
+    }
+  };
+
   const fetchRestaurants = async () => {
     setLoading(true);
     try {
-      const [restRes, usrRes, twilioRes, intRes, tursoRes] = await Promise.all([
-        fetch("/api/restaurants", { cache: "no-store" }),
-        fetch("/api/users", { cache: "no-store" }),
-        fetch("/api/platform/twilio", { cache: "no-store" }),
-        fetch("/api/platform/integrations", { cache: "no-store" }),
-        fetch("/api/platform/turso-sync", { cache: "no-store" }),
-      ]);
-      const data = await restRes.json();
-      const usrData = await usrRes.json();
-      const twilioData = await twilioRes.json();
-      const intData = await intRes.json();
+      const [authRes, restRes, usrRes, twilioRes, intRes, tursoRes] =
+        await Promise.all([
+          fetch("/api/auth", { cache: "no-store" }),
+          fetch("/api/restaurants", { cache: "no-store" }),
+          fetch("/api/users", { cache: "no-store" }),
+          fetch("/api/platform/twilio", { cache: "no-store" }),
+          fetch("/api/platform/integrations", { cache: "no-store" }),
+          fetch("/api/platform/turso-sync", { cache: "no-store" }),
+        ]);
+
+      const authData = await authRes.json().catch(() => null);
+      if (authData) {
+        setStrictAuthEnforced(Boolean(authData.strictAuthEnforced));
+        if (
+          authData.authenticated &&
+          authData.session?.actor === "staff" &&
+          authData.session?.scope === "platform"
+        ) {
+          setPlatformSession(authData.session);
+          setAuthRequiredPrompt(null);
+        } else {
+          setPlatformSession(null);
+        }
+      }
+
+      const data = await restRes.json().catch(() => ({}));
+      const usrData = await usrRes.json().catch(() => ({}));
+      const twilioData = await twilioRes.json().catch(() => ({}));
+      const intData = await intRes.json().catch(() => ({}));
       const tursoData = await tursoRes.json().catch(() => null);
-      if (data.restaurants) {
+
+      const authBlockedRes = [usrRes, twilioRes, intRes, tursoRes].find(
+        (r) => r.status === 401 || r.status === 403
+      );
+      if (authBlockedRes) {
+        const errPayload =
+          usrRes.status === 401 || usrRes.status === 403
+            ? usrData
+            : twilioRes.status === 401 || twilioRes.status === 403
+            ? twilioData
+            : intRes.status === 401 || intRes.status === 403
+            ? intData
+            : tursoData;
+        setAuthRequiredPrompt(
+          errPayload?.error ||
+            "Platform administrator sign-in is required to view and manage Super Admin controls."
+        );
+      }
+
+      if (restRes.ok && data.restaurants) {
         setRestaurants(data.restaurants);
       }
-      if (usrData.users) {
+      if (usrRes.ok && usrData.users) {
         setUsers(usrData.users);
+      } else if (usrRes.status === 401 || usrRes.status === 403) {
+        setUsers([]);
       }
-      if (twilioData.config) {
+      if (twilioRes.ok && twilioData.config) {
         let resolvedTwilio = twilioData.config as PlatformTwilioConfig;
         try {
           const localTwilioRaw = window.localStorage.getItem(
@@ -206,10 +332,10 @@ export default function SuperAdminDashboard() {
         }
         setPlatformTwilio(resolvedTwilio);
       }
-      if (twilioData.recentSmsLogs) {
+      if (twilioRes.ok && twilioData.recentSmsLogs) {
         setPlatformSmsLogs(twilioData.recentSmsLogs);
       }
-      if (intData.config) {
+      if (intRes.ok && intData.config) {
         let resolvedInt = intData.config as PlatformIntegrationsConfig;
         try {
           const localIntRaw = window.localStorage.getItem(
@@ -243,7 +369,7 @@ export default function SuperAdminDashboard() {
         }
         setPlatformIntegrations(resolvedInt);
       }
-      if (tursoData) {
+      if (tursoRes.ok && tursoData) {
         setTursoStatus(tursoData);
       }
     } catch (e) {
@@ -263,7 +389,8 @@ export default function SuperAdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ direction }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (handleAuthFailure(res.status, data)) return;
       if (data.status) {
         setTursoStatus(data.status);
       }
@@ -312,7 +439,8 @@ export default function SuperAdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ config: optimistic }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (handleAuthFailure(res.status, data)) return;
       if (res.ok && data.config) {
         setPlatformIntegrations(data.config);
         setLastSavedIntegrationsAt(new Date().toLocaleTimeString());
@@ -345,7 +473,8 @@ export default function SuperAdminDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "finish_and_publish_all" }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok && data.config) {
       setPlatformIntegrations(data.config);
       setLastSavedIntegrationsAt(new Date().toLocaleTimeString());
@@ -380,6 +509,8 @@ export default function SuperAdminDashboard() {
         enabled,
       }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok) {
       await fetchRestaurants();
       showToastMessage(
@@ -408,7 +539,8 @@ export default function SuperAdminDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(optimistic),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok && data.config) {
       setPlatformTwilio(data.config);
       try {
@@ -435,7 +567,8 @@ export default function SuperAdminDashboard() {
         restaurantId,
       }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok && data.smsLog) {
       if (data.recentSmsLogs) setPlatformSmsLogs(data.recentSmsLogs);
       showToastMessage(
@@ -462,6 +595,8 @@ export default function SuperAdminDashboard() {
         pinCode: newUserPin,
       }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok) {
       setNewUserName("");
       setNewUserEmail("");
@@ -470,6 +605,8 @@ export default function SuperAdminDashboard() {
       showToastMessage(
         `👤 Created ${ROLE_DEFINITIONS[newUserRole]?.label} account for ${newUserName}!`
       );
+    } else {
+      showToastMessage(`⚠️ ${data.error || "Could not create user"}`);
     }
   };
 
@@ -482,9 +619,13 @@ export default function SuperAdminDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, ...updates }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok) {
       await fetchRestaurants();
       showToastMessage("✅ Updated user role & permissions!");
+    } else {
+      showToastMessage(`⚠️ ${data.error || "Could not update user"}`);
     }
   };
 
@@ -493,6 +634,8 @@ export default function SuperAdminDashboard() {
       `/api/users?userId=${encodeURIComponent(userId)}`,
       { method: "DELETE" }
     );
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok) {
       await fetchRestaurants();
       showToastMessage(`🗑️ Removed user "${name}".`);
@@ -565,7 +708,8 @@ export default function SuperAdminDashboard() {
           },
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (handleAuthFailure(res.status, data)) return;
       if (res.ok && data.restaurant) {
         setShowCreateModal(false);
         setFormName("");
@@ -594,6 +738,8 @@ export default function SuperAdminDashboard() {
         customDomain: tenant.customDomain,
       }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok) {
       await fetchRestaurants();
       setDnsModalTenant(null);
@@ -615,6 +761,8 @@ export default function SuperAdminDashboard() {
           : "Temporarily paused by Super Admin / Restaurant Manager",
       }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok) {
       await fetchRestaurants();
       showToastMessage(
@@ -634,6 +782,8 @@ export default function SuperAdminDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     });
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok) {
       await fetchRestaurants();
       showToastMessage(
@@ -661,6 +811,8 @@ export default function SuperAdminDashboard() {
         features: customizeTenant.features,
       }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (handleAuthFailure(res.status, data)) return;
     if (res.ok) {
       setCustomizeTenant(null);
       await fetchRestaurants();
@@ -957,8 +1109,52 @@ export default function SuperAdminDashboard() {
           </div>
         </nav>
 
-        {/* Sidebar Footer: Platform Status & Refresh */}
+        {/* Sidebar Footer: Platform Session, Status & Refresh */}
         <div className="border-t border-slate-800/80 p-3.5 space-y-2.5 bg-slate-950">
+          {platformSession ? (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-bold text-white">
+                      {platformSession.name}
+                    </div>
+                    <div className="truncate text-[10px] font-medium text-emerald-300">
+                      {ROLE_DEFINITIONS[platformSession.role as UserRole]?.label ||
+                        platformSession.role}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAdminSignOut}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-semibold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition shrink-0"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-3 w-3" />
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setAdminLoginError(null);
+                setShowAdminLoginModal(true);
+              }}
+              className="flex w-full items-center justify-between rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-orange-300 hover:bg-orange-500/20 transition"
+            >
+              <span className="flex items-center gap-2">
+                <Lock className="h-3.5 w-3.5" />
+                Platform Admin Sign In
+              </span>
+              <span className="rounded bg-slate-950/60 px-1.5 py-0.5 font-mono text-[9px] uppercase text-slate-300">
+                {strictAuthEnforced ? "Required" : "Demo"}
+              </span>
+            </button>
+          )}
           <div className="flex items-center justify-between rounded-xl border border-slate-800/90 bg-slate-900/70 px-3 py-2 text-[11px]">
             <div className="flex items-center gap-2 min-w-0">
               <span
@@ -1017,6 +1213,38 @@ export default function SuperAdminDashboard() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+              {platformSession ? (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs">
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  <span className="font-semibold text-white">
+                    {platformSession.name}
+                  </span>
+                  <span className="hidden sm:inline rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                    {ROLE_DEFINITIONS[platformSession.role as UserRole]?.label ||
+                      platformSession.role}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAdminSignOut}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-slate-300 hover:border-rose-500/40 hover:text-rose-300 transition"
+                  >
+                    <LogOut className="h-3 w-3" />
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminLoginError(null);
+                    setShowAdminLoginModal(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/40 bg-orange-500/15 px-3 py-2 text-xs font-semibold text-orange-300 hover:bg-orange-500/25 transition"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Admin Sign In</span>
+                </button>
+              )}
               <div className="hidden md:flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-xs text-slate-300">
                 <Globe className="h-3.5 w-3.5 text-sky-400" />
                 <span>
@@ -1051,6 +1279,32 @@ export default function SuperAdminDashboard() {
         </header>
 
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 space-y-6 sm:space-y-8">
+        {authRequiredPrompt && !platformSession && (
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-5 py-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <Lock className="h-5 w-5 shrink-0 text-amber-400" />
+              <div>
+                <p className="text-sm font-bold text-white">
+                  Platform Admin Authentication Required
+                </p>
+                <p className="text-xs text-amber-200/90">
+                  {authRequiredPrompt}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setAdminLoginError(null);
+                setShowAdminLoginModal(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-600 transition shrink-0"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Sign In as Platform Admin
+            </button>
+          </div>
+        )}
         {/* Hero Architecture Banner */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-orange-950/40 p-5 sm:p-6 md:p-8">
           <div className="max-w-3xl space-y-3">
@@ -4003,6 +4257,84 @@ export default function SuperAdminDashboard() {
                 className="rounded-xl bg-orange-500 px-5 py-2 text-xs font-semibold text-white hover:bg-orange-600"
               >
                 Save Tenant Customizations
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* MODAL 4: Platform Admin Sign In Dialog */}
+      {showAdminLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={handleAdminSignIn}
+            className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-5"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/15 border border-orange-500/30 text-orange-400">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Platform Admin Sign In
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Issues a signed HTTP-only session cookie
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdminLoginModal(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {adminLoginError && (
+              <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-200">
+                {adminLoginError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-slate-300">
+                Platform Email or 4-Digit Admin PIN
+              </label>
+              <input
+                type="text"
+                autoFocus
+                placeholder="e.g. 0001 or founder@platerift.com"
+                value={adminLoginInput}
+                onChange={(e) => setAdminLoginInput(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm font-mono text-white focus:border-orange-500 focus:outline-none"
+              />
+              <p className="text-[11px] text-slate-400">
+                Seeded demo PINs:{" "}
+                <span className="font-mono text-slate-300">0001</span> (Super
+                Admin),{" "}
+                <span className="font-mono text-slate-300">0002</span> (Ops),{" "}
+                <span className="font-mono text-slate-300">0003</span> (Billing)
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 border-t border-slate-800 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowAdminLoginModal(false)}
+                className="rounded-xl border border-slate-700 px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={adminLoginBusy || !adminLoginInput.trim()}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2 text-xs font-semibold text-white hover:from-orange-600 hover:to-rose-700 disabled:opacity-50 transition"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                {adminLoginBusy ? "Signing In..." : "Sign In"}
               </button>
             </div>
           </form>

@@ -5,12 +5,24 @@ import {
   getRestaurantBySlugOrDomain,
   hydrateFromTursoIfNeeded,
 } from "@/lib/db";
+import {
+  authorizeRestaurantStaff,
+  authorizeStaffSessionPrecheck,
+} from "@/lib/session";
 
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const preAuth = authorizeStaffSessionPrecheck(req);
+    if (!preAuth.ok) {
+      return NextResponse.json(
+        { error: preAuth.error },
+        { status: preAuth.status }
+      );
+    }
+
     await hydrateFromTursoIfNeeded();
     const { slug } = await context.params;
     const restaurant = getRestaurantBySlugOrDomain(decodeURIComponent(slug));
@@ -19,6 +31,11 @@ export async function POST(
         { error: "Restaurant not found" },
         { status: 404 }
       );
+    }
+
+    const authz = authorizeRestaurantStaff(req, restaurant.id, "customers");
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
     }
 
     const body = await req.json();
@@ -31,6 +48,7 @@ export async function POST(
 
     const customer = createCustomerManual({
       ...body,
+      phone: body.phone ? String(body.phone) : "",
       restaurantId: restaurant.id,
     });
 

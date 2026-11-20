@@ -6,6 +6,7 @@ import {
   hydrateFromTursoIfNeeded,
   listMenuItems,
   listRestaurants,
+  syncPlatformSettingFromTurso,
   updateMenuItem,
   updateRestaurantTenant,
 } from "@/lib/db";
@@ -14,26 +15,37 @@ import { verifySquareWebhookSignature } from "@/lib/security";
 import { searchSquareCatalogObjects } from "@/lib/squareCloverPosClient";
 
 export async function GET() {
-  const platformConfig = getPlatformIntegrationsConfig();
-  return NextResponse.json({
-    endpoint: "https://platerift.com/api/webhooks/square",
-    provider: "Square POS & Commerce API",
-    status: platformConfig.square.setupCompleted
-      ? "active"
-      : "awaiting_admin_setup",
-    environment: platformConfig.square.environment,
-    supportedEvents: [
-      "inventory.count.updated",
-      "catalog.version.updated",
-      "order.updated",
-      "payment.updated",
-    ],
-  });
+  try {
+    await hydrateFromTursoIfNeeded();
+    await syncPlatformSettingFromTurso("platform_integrations");
+    const platformConfig = getPlatformIntegrationsConfig();
+    return NextResponse.json({
+      endpoint: "https://platerift.com/api/webhooks/square",
+      provider: "Square POS & Commerce API",
+      status: platformConfig.square.setupCompleted
+        ? "active"
+        : "awaiting_admin_setup",
+      environment: platformConfig.square.environment,
+      supportedEvents: [
+        "inventory.count.updated",
+        "catalog.version.updated",
+        "order.updated",
+        "payment.updated",
+      ],
+    });
+  } catch (error) {
+    console.error("Square webhook GET error:", error);
+    return NextResponse.json(
+      { error: "Failed to load Square webhook status" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await hydrateFromTursoIfNeeded();
+    await syncPlatformSettingFromTurso("platform_integrations");
     const rawBody = await req.text();
     const body = JSON.parse(rawBody || "{}");
     const platformConfig = getPlatformIntegrationsConfig();

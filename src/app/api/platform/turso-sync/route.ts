@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { inspectTursoDatabase, syncWithTursoNow } from "@/lib/db";
+import { authorizePlatformAdmin } from "@/lib/session";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authz = authorizePlatformAdmin(req);
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     const status = await inspectTursoDatabase();
     return NextResponse.json(status);
   } catch (err) {
@@ -19,6 +25,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authz = authorizePlatformAdmin(req);
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
+    }
+
     const body = await req.json().catch(() => ({}));
     const direction =
       body.direction === "push" || body.direction === "pull"
@@ -41,4 +52,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

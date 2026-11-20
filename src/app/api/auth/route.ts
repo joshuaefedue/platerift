@@ -2,11 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   authenticateOrRegisterCustomer,
   authenticateStaffOrAdminUser,
+  commitToTurso,
   getRestaurantBySlugOrDomain,
+  hydrateFromTursoIfNeeded,
   listCustomerOrders,
   listScheduledReorders,
 } from "@/lib/db";
 import { checkRateLimit } from "@/lib/security";
+import {
+  attachSessionCookie,
+  clearSessionCookie,
+  createSessionToken,
+  getSessionFromRequest,
+  isStrictAuthEnforced,
+} from "@/lib/session";
+import type { UserScope } from "@/lib/types";
+
+export async function GET(req: NextRequest) {
+  const session = getSessionFromRequest(req);
+  return NextResponse.json({
+    authenticated: Boolean(session),
+    strictAuthEnforced: isStrictAuthEnforced(),
+    session,
+  });
+}
+
+export async function DELETE() {
+  const res = NextResponse.json({ ok: true, authenticated: false });
+  return clearSessionCookie(res);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,14 +45,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    await hydrateFromTursoIfNeeded();
+
     const body = await req.json();
     const actor = body.actor || "customer";
 
     if (actor === "staff") {
+      const requestedScope =
+        body.scope === "platform" || body.scope === "restaurant"
+          ? (body.scope as UserScope)
+          : undefined;
+      const requestedRestRaw = body.restaurantId || body.restaurantSlug;
+      const resolvedRest = requestedRestRaw
+        ? getRestaurantBySlugOrDomain(String(requestedRestRaw))
+        : null;
+      const resolvedRestaurantId = resolvedRest
+        ? resolvedRest.id
+        : requestedRestRaw
+        ? String(requestedRestRaw)
+        : undefined;
+
       const user = authenticateStaffOrAdminUser({
         emailOrPin: String(body.emailOrPin || ""),
-        scope: body.scope,
-        restaurantId: body.restaurantId,
+        scope: requestedScope,
+        restaurantId: resolvedRestaurantId,
       });
 
       if (!user) {
@@ -41,11 +81,50 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      return NextResponse.json({ user });
+      if (user.status === "suspended") {
+        return NextResponse.json(
+          { error: "This staff account is currently suspended." },
+          { status: 403 }
+        );
+      }
+
+      if (requestedScope === "platform" && user.scope !== "platform") {
+        return NextResponse.json(
+          { error: "Platform administrator credentials are required." },
+          { status: 403 }
+        );
+      }
+
+      if (
+        resolvedRestaurantId &&
+        user.scope === "restaurant" &&
+        user.restaurantId !== resolvedRestaurantId
+      ) {
+        return NextResponse.json(
+          { error: "This staff account belongs to a different restaurant." },
+          { status: 403 }
+        );
+      }
+
+      const token = createSessionToken({
+        sub: user.id,
+        actor: "staff",
+        scope: user.scope,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+        restaurantId: user.restaurantId ?? null,
+      });
+
+      await commitToTurso();
+      const res = NextResponse.json({ user });
+      return attachSessionCookie(res, token);
     }
 
     // Customer Authentication / Registration
-    const slugOrId = String(body.restaurantSlug || body.restaurantId || "bella-napoli");
+    const slugOrId = String(
+      body.restaurantSlug || body.restaurantId || "bella-napoli"
+    );
     const restaurant = getRestaurantBySlugOrDomain(slugOrId);
     if (!restaurant) {
       return NextResponse.json(
@@ -72,6 +151,18 @@ export async function POST(req: NextRequest) {
       notes: body.notes,
     });
 
+    const token = createSessionToken({
+      sub: customer.id,
+      actor: "customer",
+      scope: "customer",
+      role: "customer",
+      email: customer.email,
+      name: customer.name,
+      restaurantId: restaurant.id,
+    });
+
+    await commitToTurso();
+
     const orders = listCustomerOrders(
       restaurant.id,
       customer.id,
@@ -83,11 +174,12 @@ export async function POST(req: NextRequest) {
       customer.email
     );
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       customer,
       orders,
       scheduledReorders,
     });
+    return attachSessionCookie(res, token);
   } catch (error) {
     console.error("POST /api/auth error:", error);
     return NextResponse.json(

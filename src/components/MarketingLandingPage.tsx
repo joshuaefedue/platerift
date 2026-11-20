@@ -157,7 +157,7 @@ export default function MarketingLandingPage() {
   const [liveDemos, setLiveDemos] = useState(DEMO_RESTAURANTS);
 
   useEffect(() => {
-    fetch("/api/restaurants", { cache: "no-store" })
+    fetch("/api/restaurants?view=public", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data?.restaurants) && data.restaurants.length > 0) {
